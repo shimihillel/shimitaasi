@@ -241,7 +241,7 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .action-button.edit { font-size: 22px; }
 .action-button.delete { font-size: 31px; }
-.action-button.move { font-size: 24px; }
+.action-button.move { font-size: 25px; }
 
 .action-button[disabled] {
   opacity: .18;

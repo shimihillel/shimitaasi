@@ -97,10 +97,13 @@ function deleteTask(id) {
   renderTasks();
 }
 
-function moveTaskUp(id) {
+function moveTaskToTop(id) {
   const index = tasks.findIndex(task => task.id === id);
   if (index <= 0) return;
-  [tasks[index - 1], tasks[index]] = [tasks[index], tasks[index - 1]];
+
+  const [task] = tasks.splice(index, 1);
+  tasks.unshift(task);
+
   saveTasks();
   renderTasks();
 }
@@ -183,10 +186,10 @@ function renderTasks() {
     const moveButton = document.createElement("button");
     moveButton.className = "action-button move";
     moveButton.type = "button";
-    moveButton.textContent = "↑";
-    moveButton.setAttribute("aria-label", "העלי מטלה למעלה");
+    moveButton.textContent = "⤒";
+    moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
     moveButton.disabled = index === 0;
-    moveButton.addEventListener("click", () => moveTaskUp(task.id));
+    moveButton.addEventListener("click", () => moveTaskToTop(task.id));
 
     const editButton = document.createElement("button");
     editButton.className = "action-button edit";
