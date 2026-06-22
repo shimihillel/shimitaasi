@@ -144,6 +144,7 @@ button { -webkit-tap-highlight-color: transparent; }
   gap: 4px;
   align-items: center;
   min-height: 54px;
+  max-height: 82px;
   padding: 2px 0;
   border-bottom: 1px solid rgba(78, 134, 157, 0.14);
 }
@@ -197,9 +198,8 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .task-text {
   width: 100%;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  display: block;
+  max-height: calc(1.22em * 2);
   overflow: hidden;
   padding: 0;
   border: 0;
@@ -211,6 +211,7 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 720;
   overflow-wrap: anywhere;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .task-row.done .task-text {
@@ -456,8 +457,3 @@ textarea::placeholder { color: rgba(117, 111, 105, .62); }
   overflow-wrap: anywhere;
 }
 
-@supports not (-webkit-line-clamp: 2) {
-  .task-text {
-    max-height: calc(1.22em * 2);
-  }
-}
