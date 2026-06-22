@@ -241,7 +241,19 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .action-button.edit { font-size: 22px; }
 .action-button.delete { font-size: 31px; }
-.action-button.move { font-size: 25px; }
+.action-button.move {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  width: 48px;
+  min-width: 48px;
+}
+
+.action-button.move::before {
+  content: "↑";
+  margin-inline-start: 2px;
+  font-size: 16px;
+}
 
 .action-button[disabled] {
   opacity: .18;
