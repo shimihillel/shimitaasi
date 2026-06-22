@@ -186,7 +186,7 @@ function renderTasks() {
     const moveButton = document.createElement("button");
     moveButton.className = "action-button move";
     moveButton.type = "button";
-    moveButton.textContent = "⇡";
+    moveButton.textContent = "↑";
     moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
     moveButton.title = "הקפצה לראש";
     moveButton.disabled = index === 0;
