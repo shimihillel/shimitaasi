@@ -46,8 +46,8 @@
       <button class="icon-close" id="closeDialogButton" type="button" aria-label="סגירה">×</button>
       <h2 id="dialogTitle"><mark>מה נפל עלייך עכשיו?</mark></h2>
       <label class="sr-only" for="taskInput">טקסט המטלה</label>
-      <textarea id="taskInput" rows="3" maxlength="120" placeholder="כתוב פה..." required></textarea>
-      <p class="hint"><span id="charCount">0</span>/120</p>
+      <textarea id="taskInput" rows="3" maxlength="500" placeholder="כתוב פה..." required></textarea>
+      <p class="hint"><span id="charCount">0</span>/500</p>
       <button class="save-button" type="submit">שימי, תעשי</button>
     </form>
   </dialog>
@@ -59,6 +59,15 @@
         <button class="secondary-button" id="cancelDeleteButton" type="button">לא, להשאיר</button>
         <button class="danger-button" id="confirmDeleteButton" type="button">כן, ביי</button>
       </div>
+    </form>
+  </dialog>
+
+  <dialog id="viewTaskDialog" class="dialog">
+    <form method="dialog" class="dialog-card view-card">
+      <button class="icon-close" id="closeViewDialogButton" type="button" aria-label="סגירה">×</button>
+      <h2><mark>הפתק המלא</mark></h2>
+      <p id="viewTaskText" class="view-task-text"></p>
+      <button class="save-button" id="closeViewBottomButton" type="button">סגור, הבנתי</button>
     </form>
   </dialog>
 

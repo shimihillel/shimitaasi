@@ -12,6 +12,10 @@ const charCount = document.getElementById("charCount");
 const deleteDialog = document.getElementById("deleteDialog");
 const cancelDeleteButton = document.getElementById("cancelDeleteButton");
 const confirmDeleteButton = document.getElementById("confirmDeleteButton");
+const viewTaskDialog = document.getElementById("viewTaskDialog");
+const viewTaskText = document.getElementById("viewTaskText");
+const closeViewDialogButton = document.getElementById("closeViewDialogButton");
+const closeViewBottomButton = document.getElementById("closeViewBottomButton");
 
 let tasks = [];
 let editingTaskId = null;
@@ -131,6 +135,16 @@ function updateCharCount() {
   charCount.textContent = taskInput.value.length;
 }
 
+function openViewTaskDialog(task) {
+  viewTaskText.textContent = task.text;
+  viewTaskDialog.showModal();
+}
+
+function closeViewTaskDialog() {
+  viewTaskDialog.close();
+  viewTaskText.textContent = "";
+}
+
 function renderTasks() {
   removeOldDoneTasks();
   taskList.innerHTML = "";
@@ -150,9 +164,12 @@ function renderTasks() {
     const textWrap = document.createElement("div");
     textWrap.className = "task-text-wrap";
 
-    const taskText = document.createElement("div");
+    const taskText = document.createElement("button");
     taskText.className = "task-text";
+    taskText.type = "button";
     taskText.textContent = task.text;
+    taskText.setAttribute("aria-label", "פתיחת המטלה המלאה");
+    taskText.addEventListener("click", () => openViewTaskDialog(task));
 
     const taskDate = document.createElement("div");
     taskDate.className = "task-date";
@@ -210,6 +227,8 @@ taskForm.addEventListener("submit", event => {
 });
 
 cancelDeleteButton.addEventListener("click", closeDeleteDialog);
+closeViewDialogButton.addEventListener("click", closeViewTaskDialog);
+closeViewBottomButton.addEventListener("click", closeViewTaskDialog);
 confirmDeleteButton.addEventListener("click", () => {
   if (deletingTaskId) deleteTask(deletingTaskId);
   closeDeleteDialog();
@@ -219,6 +238,7 @@ window.addEventListener("keydown", event => {
   if (event.key === "Escape") {
     if (taskDialog.open) closeTaskDialog();
     if (deleteDialog.open) closeDeleteDialog();
+    if (viewTaskDialog.open) closeViewTaskDialog();
   }
 });
 
