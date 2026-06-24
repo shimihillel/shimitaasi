@@ -84,11 +84,21 @@ function updateTask(id, text) {
 
 function toggleDone(id) {
   const today = todayKey();
-  tasks = tasks.map(task => {
-    if (task.id !== id) return task;
-    const nextDone = !task.done;
-    return { ...task, done: nextDone, doneAt: nextDone ? today : null };
-  });
+  const index = tasks.findIndex(task => task.id === id);
+  if (index < 0) return;
+
+  const currentTask = tasks[index];
+  const nextDone = !currentTask.done;
+  const updatedTask = { ...currentTask, done: nextDone, doneAt: nextDone ? today : null };
+
+  tasks.splice(index, 1);
+
+  if (nextDone) {
+    tasks.push(updatedTask);
+  } else {
+    tasks.unshift(updatedTask);
+  }
+
   saveTasks();
   renderTasks();
 }
@@ -100,27 +110,45 @@ function deleteTask(id) {
 }
 
 function moveTaskToTop(id) {
-  const index = tasks.findIndex(task => task.id === id);
+  const task = tasks.find(item => item.id === id);
+  if (!task || task.done) return;
+
+  const openTasks = tasks.filter(item => !item.done);
+  const doneTasks = tasks.filter(item => item.done);
+  const index = openTasks.findIndex(item => item.id === id);
   if (index <= 0) return;
 
-  const [task] = tasks.splice(index, 1);
-  tasks.unshift(task);
+  const [movedTask] = openTasks.splice(index, 1);
+  openTasks.unshift(movedTask);
+  tasks = [...openTasks, ...doneTasks];
 
   saveTasks();
   renderTasks();
 }
 
 function moveTaskBy(id, direction) {
-  const index = tasks.findIndex(task => task.id === id);
+  const task = tasks.find(item => item.id === id);
+  if (!task || task.done) return;
+
+  const openTasks = tasks.filter(item => !item.done);
+  const doneTasks = tasks.filter(item => item.done);
+  const index = openTasks.findIndex(item => item.id === id);
   const targetIndex = index + direction;
 
-  if (index < 0 || targetIndex < 0 || targetIndex >= tasks.length) return;
+  if (index < 0 || targetIndex < 0 || targetIndex >= openTasks.length) return;
 
-  const [task] = tasks.splice(index, 1);
-  tasks.splice(targetIndex, 0, task);
+  const [movedTask] = openTasks.splice(index, 1);
+  openTasks.splice(targetIndex, 0, movedTask);
+  tasks = [...openTasks, ...doneTasks];
 
   saveTasks();
   renderTasks();
+}
+
+function getVisibleTasks() {
+  const openTasks = tasks.filter(task => !task.done);
+  const doneTasks = tasks.filter(task => task.done);
+  return [...openTasks, ...doneTasks];
 }
 
 function setSortMode(nextMode) {
@@ -176,7 +204,9 @@ function renderTasks() {
   taskList.innerHTML = "";
   emptyState.hidden = tasks.length > 0;
 
-  tasks.forEach((task, index) => {
+  const visibleTasks = getVisibleTasks();
+
+  visibleTasks.forEach((task, index) => {
     const row = document.createElement("article");
     row.className = `task-row${task.done ? " done" : ""}`;
 
@@ -215,7 +245,9 @@ function renderTasks() {
       topButton.textContent = "⇈";
       topButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
       topButton.title = "הקפצה לראש";
-      topButton.disabled = index === 0;
+      const openTasksCount = tasks.filter(item => !item.done).length;
+      const openIndex = tasks.filter(item => !item.done).findIndex(item => item.id === task.id);
+      topButton.disabled = task.done || openIndex === 0;
       topButton.addEventListener("click", () => moveTaskToTop(task.id));
 
       const upButton = document.createElement("button");
@@ -224,7 +256,7 @@ function renderTasks() {
       upButton.textContent = "↑";
       upButton.setAttribute("aria-label", "העלי מטלה מקום אחד");
       upButton.title = "לעלות מקום";
-      upButton.disabled = index === 0;
+      upButton.disabled = task.done || openIndex === 0;
       upButton.addEventListener("click", () => moveTaskBy(task.id, -1));
 
       const downButton = document.createElement("button");
@@ -233,7 +265,7 @@ function renderTasks() {
       downButton.textContent = "↓";
       downButton.setAttribute("aria-label", "הורידי מטלה מקום אחד");
       downButton.title = "להוריד מקום";
-      downButton.disabled = index === tasks.length - 1;
+      downButton.disabled = task.done || openIndex === openTasksCount - 1;
       downButton.addEventListener("click", () => moveTaskBy(task.id, 1));
 
       actions.append(topButton, upButton, downButton);
@@ -244,7 +276,8 @@ function renderTasks() {
       moveButton.textContent = "↑";
       moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
       moveButton.title = "הקפצה לראש";
-      moveButton.disabled = index === 0;
+      const openIndex = tasks.filter(item => !item.done).findIndex(item => item.id === task.id);
+      moveButton.disabled = task.done || openIndex === 0;
       moveButton.addEventListener("click", () => moveTaskToTop(task.id));
 
       const editButton = document.createElement("button");
