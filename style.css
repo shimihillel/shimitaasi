@@ -109,6 +109,34 @@ button { -webkit-tap-highlight-color: transparent; }
   font-size: 22px;
 }
 
+
+.sort-toggle {
+  margin-top: 12px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 850;
+  box-shadow: 0 3px 0 rgba(23, 21, 19, .72);
+  cursor: pointer;
+  transform: rotate(.6deg);
+}
+
+.sort-toggle[aria-pressed="true"] {
+  background: var(--pink);
+}
+
+.sort-mode .task-row {
+  background: rgba(255, 231, 124, .12);
+}
+
+.task-row.sorting .task-actions {
+  gap: 0;
+}
+
 .doodle {
   position: absolute;
   font-size: 36px;
@@ -244,9 +272,11 @@ button { -webkit-tap-highlight-color: transparent; }
 .action-button.move {
   font-size: 24px;
   font-weight: 900;
-  width: 44px;
-  min-width: 44px;
+  width: 42px;
+  min-width: 42px;
 }
+
+.action-button.move.top { font-size: 22px; }
 
 .action-button[disabled] {
   opacity: .18;
@@ -425,6 +455,7 @@ textarea::placeholder { color: rgba(117, 111, 105, .62); }
 
 @media (max-width: 380px) {
   :root { --tap: 42px; }
+  .sort-toggle { min-height: 40px; font-size: 16px; }
   .paper { padding-inline: 18px 20px; }
   .task-row { grid-template-columns: var(--tap) minmax(0, 1fr); }
   .task-actions {

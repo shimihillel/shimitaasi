@@ -16,10 +16,12 @@ const viewTaskDialog = document.getElementById("viewTaskDialog");
 const viewTaskText = document.getElementById("viewTaskText");
 const closeViewDialogButton = document.getElementById("closeViewDialogButton");
 const closeViewBottomButton = document.getElementById("closeViewBottomButton");
+const sortModeButton = document.getElementById("sortModeButton");
 
 let tasks = [];
 let editingTaskId = null;
 let deletingTaskId = null;
+let sortMode = false;
 
 function todayKey() {
   const now = new Date();
@@ -108,6 +110,27 @@ function moveTaskToTop(id) {
   renderTasks();
 }
 
+function moveTaskBy(id, direction) {
+  const index = tasks.findIndex(task => task.id === id);
+  const targetIndex = index + direction;
+
+  if (index < 0 || targetIndex < 0 || targetIndex >= tasks.length) return;
+
+  const [task] = tasks.splice(index, 1);
+  tasks.splice(targetIndex, 0, task);
+
+  saveTasks();
+  renderTasks();
+}
+
+function setSortMode(nextMode) {
+  sortMode = nextMode;
+  document.body.classList.toggle("sort-mode", sortMode);
+  sortModeButton.textContent = sortMode ? "סיימתי" : "סדרי לי";
+  sortModeButton.setAttribute("aria-pressed", String(sortMode));
+  renderTasks();
+}
+
 function openTaskDialog(mode, task = null) {
   editingTaskId = mode === "edit" ? task.id : null;
   dialogTitle.innerHTML = mode === "edit" ? "<mark>מה לשנות פה?</mark>" : "<mark>מה נפל עלייך עכשיו?</mark>";
@@ -183,36 +206,70 @@ function renderTasks() {
     const actions = document.createElement("div");
     actions.className = "task-actions";
 
-    const moveButton = document.createElement("button");
-    moveButton.className = "action-button move";
-    moveButton.type = "button";
-    moveButton.textContent = "↑";
-    moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
-    moveButton.title = "הקפצה לראש";
-    moveButton.disabled = index === 0;
-    moveButton.addEventListener("click", () => moveTaskToTop(task.id));
+    if (sortMode) {
+      row.classList.add("sorting");
 
-    const editButton = document.createElement("button");
-    editButton.className = "action-button edit";
-    editButton.type = "button";
-    editButton.textContent = "✎";
-    editButton.setAttribute("aria-label", "עריכת מטלה");
-    editButton.addEventListener("click", () => openTaskDialog("edit", task));
+      const topButton = document.createElement("button");
+      topButton.className = "action-button move top";
+      topButton.type = "button";
+      topButton.textContent = "⇈";
+      topButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
+      topButton.title = "הקפצה לראש";
+      topButton.disabled = index === 0;
+      topButton.addEventListener("click", () => moveTaskToTop(task.id));
 
-    const deleteButton = document.createElement("button");
-    deleteButton.className = "action-button delete";
-    deleteButton.type = "button";
-    deleteButton.textContent = "×";
-    deleteButton.setAttribute("aria-label", "מחיקת מטלה");
-    deleteButton.addEventListener("click", () => openDeleteDialog(task.id));
+      const upButton = document.createElement("button");
+      upButton.className = "action-button move up";
+      upButton.type = "button";
+      upButton.textContent = "↑";
+      upButton.setAttribute("aria-label", "העלי מטלה מקום אחד");
+      upButton.title = "לעלות מקום";
+      upButton.disabled = index === 0;
+      upButton.addEventListener("click", () => moveTaskBy(task.id, -1));
 
-    actions.append(moveButton, editButton, deleteButton);
+      const downButton = document.createElement("button");
+      downButton.className = "action-button move down";
+      downButton.type = "button";
+      downButton.textContent = "↓";
+      downButton.setAttribute("aria-label", "הורידי מטלה מקום אחד");
+      downButton.title = "להוריד מקום";
+      downButton.disabled = index === tasks.length - 1;
+      downButton.addEventListener("click", () => moveTaskBy(task.id, 1));
+
+      actions.append(topButton, upButton, downButton);
+    } else {
+      const moveButton = document.createElement("button");
+      moveButton.className = "action-button move";
+      moveButton.type = "button";
+      moveButton.textContent = "↑";
+      moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
+      moveButton.title = "הקפצה לראש";
+      moveButton.disabled = index === 0;
+      moveButton.addEventListener("click", () => moveTaskToTop(task.id));
+
+      const editButton = document.createElement("button");
+      editButton.className = "action-button edit";
+      editButton.type = "button";
+      editButton.textContent = "✎";
+      editButton.setAttribute("aria-label", "עריכת מטלה");
+      editButton.addEventListener("click", () => openTaskDialog("edit", task));
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "action-button delete";
+      deleteButton.type = "button";
+      deleteButton.textContent = "×";
+      deleteButton.setAttribute("aria-label", "מחיקת מטלה");
+      deleteButton.addEventListener("click", () => openDeleteDialog(task.id));
+
+      actions.append(moveButton, editButton, deleteButton);
+    }
     row.append(checkButton, textWrap, actions);
     taskList.appendChild(row);
   });
 }
 
 addTaskButton.addEventListener("click", () => openTaskDialog("add"));
+sortModeButton.addEventListener("click", () => setSortMode(!sortMode));
 closeDialogButton.addEventListener("click", closeTaskDialog);
 taskInput.addEventListener("input", updateCharCount);
 
