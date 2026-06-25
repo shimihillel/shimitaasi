@@ -493,3 +493,129 @@ textarea::placeholder { color: rgba(117, 111, 105, .62); }
   overflow-wrap: anywhere;
 }
 
+
+.header-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.sort-toggle.mini {
+  margin-top: 0;
+  min-width: 112px;
+  padding: 0 14px;
+}
+
+.field-label {
+  display: block;
+  margin: 14px 4px 7px;
+  color: var(--ink);
+  text-align: right;
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.recurring-select,
+.recurring-number {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 13px;
+  border-radius: 14px;
+  border: 1.7px solid rgba(23, 21, 19, .55);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  outline: none;
+}
+
+.recurring-select:focus,
+.recurring-number:focus {
+  border-color: var(--pink-strong);
+  box-shadow: 0 0 0 4px rgba(255, 174, 195, .24);
+}
+
+.schedule-options[hidden] { display: none; }
+
+.recurring-dialog {
+  width: min(calc(100% - 24px), 448px);
+}
+
+.recurring-card {
+  max-height: min(82vh, 720px);
+  display: flex;
+  flex-direction: column;
+}
+
+.recurring-list {
+  overflow: auto;
+  margin: 2px 0 16px;
+  padding: 2px 0;
+}
+
+.recurring-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 58px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(78, 134, 157, 0.14);
+}
+
+.recurring-text {
+  min-width: 0;
+  text-align: right;
+}
+
+.recurring-text strong {
+  display: block;
+  max-height: calc(1.25em * 2);
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.recurring-text span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.recurring-actions {
+  display: flex;
+  align-items: center;
+}
+
+.recurring-empty {
+  margin: 18px 0 22px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(255, 231, 124, .26);
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.recurring-add {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 380px) {
+  .header-actions { gap: 7px; }
+  .sort-toggle.mini {
+    min-width: 100px;
+    padding: 0 10px;
+    font-size: 15px;
+  }
+}

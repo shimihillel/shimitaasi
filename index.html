@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v10-done-bottom -->
+  <!-- app-version: v11-recurring -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -26,7 +26,10 @@
         <h1>שימי, תעשי</h1>
         <div class="marker-line" aria-hidden="true"></div>
         <p>מה עכשיו?</p>
-        <button id="sortModeButton" class="sort-toggle" type="button" aria-pressed="false">סדרי לי</button>
+        <div class="header-actions">
+          <button id="recurringButton" class="sort-toggle mini" type="button">קבועות</button>
+          <button id="sortModeButton" class="sort-toggle mini" type="button" aria-pressed="false">סדרי לי</button>
+        </div>
       </header>
 
       <section id="taskList" class="task-list" aria-label="רשימת מטלות"></section>
@@ -73,6 +76,63 @@
     </form>
   </dialog>
 
-  <script src="app.js?v=10"></script>
+
+  <dialog id="recurringDialog" class="dialog recurring-dialog">
+    <div class="dialog-card recurring-card">
+      <button class="icon-close" id="closeRecurringButton" type="button" aria-label="סגירה">×</button>
+      <h2><mark>דברים שחוזרים להציק</mark></h2>
+      <div id="recurringList" class="recurring-list"></div>
+      <button id="addRecurringButton" class="save-button recurring-add" type="button">+ עוד קבועה</button>
+    </div>
+  </dialog>
+
+  <dialog id="recurringFormDialog" class="dialog">
+    <form id="recurringForm" method="dialog" class="dialog-card">
+      <button class="icon-close" id="closeRecurringFormButton" type="button" aria-label="סגירה">×</button>
+      <h2 id="recurringFormTitle"><mark>מה חוזר על עצמו?</mark></h2>
+      <label class="sr-only" for="recurringInput">טקסט המטלה הקבועה</label>
+      <textarea id="recurringInput" rows="3" maxlength="500" placeholder="כתוב פה..." required></textarea>
+
+      <label class="field-label" for="recurringFrequency">כל כמה זמן?</label>
+      <select id="recurringFrequency" class="recurring-select">
+        <option value="daily">כל יום</option>
+        <option value="weekly">פעם בשבוע</option>
+        <option value="monthly">פעם בחודש</option>
+      </select>
+
+      <div id="weeklyOptions" class="schedule-options">
+        <label class="field-label" for="recurringWeekday">באיזה יום?</label>
+        <select id="recurringWeekday" class="recurring-select">
+          <option value="0">ראשון</option>
+          <option value="1">שני</option>
+          <option value="2">שלישי</option>
+          <option value="3">רביעי</option>
+          <option value="4">חמישי</option>
+          <option value="5">שישי</option>
+          <option value="6">שבת</option>
+        </select>
+      </div>
+
+      <div id="monthlyOptions" class="schedule-options" hidden>
+        <label class="field-label" for="recurringMonthDay">באיזה יום בחודש?</label>
+        <input id="recurringMonthDay" class="recurring-number" type="number" min="1" max="31" value="1" />
+      </div>
+
+      <p class="hint">אם מטלה קבועה כבר פתוחה ברשימה — לא נוצרת כפילות. תודה לאל.</p>
+      <button class="save-button" type="submit">שימי, תעשי</button>
+    </form>
+  </dialog>
+
+  <dialog id="deleteRecurringDialog" class="dialog small-dialog">
+    <form method="dialog" class="dialog-card confirm-card">
+      <h2>למחוק קבועה?</h2>
+      <div class="confirm-actions">
+        <button class="secondary-button" id="cancelDeleteRecurringButton" type="button">לא, להשאיר</button>
+        <button class="danger-button" id="confirmDeleteRecurringButton" type="button">כן, ביי</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js?v=11"></script>
 </body>
 </html>
