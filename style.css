@@ -619,3 +619,59 @@ textarea::placeholder { color: rgba(117, 111, 105, .62); }
     font-size: 15px;
   }
 }
+
+/* v12 — tabs + shopping list */
+.tabs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 12px auto 0;
+  padding: 5px;
+  border: 2px solid rgba(23, 21, 19, .88);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .72);
+  box-shadow: 0 3px 0 rgba(23, 21, 19, .38);
+}
+
+.tab-button {
+  min-height: 38px;
+  min-width: 86px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tab-button.active {
+  background: var(--yellow);
+  box-shadow: inset 0 -2px 0 rgba(23, 21, 19, .18);
+}
+
+body.shopping-mode .header-actions #recurringButton {
+  display: none;
+}
+
+body.shopping-mode .task-date {
+  display: none;
+}
+
+body.shopping-mode .task-row {
+  min-height: 50px;
+}
+
+body.shopping-mode .task-text-wrap {
+  padding: 4px 0;
+}
+
+@media (max-width: 380px) {
+  .tab-button {
+    min-width: 78px;
+    font-size: 16px;
+    padding: 0 10px;
+  }
+}

@@ -1,4 +1,5 @@
 const STORAGE_KEY = "shimi-taasi-tasks-v1";
+const SHOPPING_STORAGE_KEY = "shimi-taasi-shopping-v1";
 const RECURRING_STORAGE_KEY = "shimi-taasi-recurring-v1";
 
 const taskList = document.getElementById("taskList");
@@ -18,6 +19,10 @@ const viewTaskText = document.getElementById("viewTaskText");
 const closeViewDialogButton = document.getElementById("closeViewDialogButton");
 const closeViewBottomButton = document.getElementById("closeViewBottomButton");
 const sortModeButton = document.getElementById("sortModeButton");
+const appTitle = document.getElementById("appTitle");
+const appSubtitle = document.getElementById("appSubtitle");
+const tasksTab = document.getElementById("tasksTab");
+const shoppingTab = document.getElementById("shoppingTab");
 
 const recurringButton = document.getElementById("recurringButton");
 const recurringDialog = document.getElementById("recurringDialog");
@@ -39,14 +44,34 @@ const cancelDeleteRecurringButton = document.getElementById("cancelDeleteRecurri
 const confirmDeleteRecurringButton = document.getElementById("confirmDeleteRecurringButton");
 
 let tasks = [];
+let shoppingItems = [];
 let recurringTasks = [];
 let editingTaskId = null;
 let deletingTaskId = null;
 let sortMode = false;
+let activeList = "tasks";
 let editingRecurringId = null;
 let deletingRecurringId = null;
 
 const weekdayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+
+function currentItems() {
+  return activeList === "shopping" ? shoppingItems : tasks;
+}
+
+function setCurrentItems(nextItems) {
+  if (activeList === "shopping") {
+    shoppingItems = nextItems;
+    saveShoppingItems();
+  } else {
+    tasks = nextItems;
+    saveTasks();
+  }
+}
+
+function isShoppingMode() {
+  return activeList === "shopping";
+}
 
 function todayKey() {
   const now = new Date();
@@ -92,6 +117,12 @@ function loadTasks() {
   }
 
   try {
+    shoppingItems = JSON.parse(localStorage.getItem(SHOPPING_STORAGE_KEY)) || [];
+  } catch {
+    shoppingItems = [];
+  }
+
+  try {
     recurringTasks = JSON.parse(localStorage.getItem(RECURRING_STORAGE_KEY)) || [];
   } catch {
     recurringTasks = [];
@@ -100,11 +131,16 @@ function loadTasks() {
   removeOldDoneTasks();
   generateDueRecurringTasks();
   saveTasks();
+  saveShoppingItems();
   saveRecurringTasks();
 }
 
 function saveTasks() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+function saveShoppingItems() {
+  localStorage.setItem(SHOPPING_STORAGE_KEY, JSON.stringify(shoppingItems));
 }
 
 function saveRecurringTasks() {
@@ -114,94 +150,99 @@ function saveRecurringTasks() {
 function removeOldDoneTasks() {
   const today = todayKey();
   tasks = tasks.filter(task => !task.done || task.doneAt === today);
+  shoppingItems = shoppingItems.filter(item => !item.done || item.doneAt === today);
 }
 
 function createTask(text, recurringId = null) {
-  tasks.unshift({
-    id: `task-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  const newItem = {
+    id: `item-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     text: text.trim(),
     createdAt: todayKey(),
     done: false,
     doneAt: null,
-    recurringId
-  });
-  saveTasks();
+    recurringId: isShoppingMode() ? null : recurringId
+  };
+
+  if (isShoppingMode()) {
+    shoppingItems.unshift(newItem);
+    saveShoppingItems();
+  } else {
+    tasks.unshift(newItem);
+    saveTasks();
+  }
   renderTasks();
 }
 
 function updateTask(id, text) {
-  tasks = tasks.map(task => task.id === id ? { ...task, text: text.trim() } : task);
-  saveTasks();
+  const items = currentItems().map(item => item.id === id ? { ...item, text: text.trim() } : item);
+  setCurrentItems(items);
   renderTasks();
 }
 
 function toggleDone(id) {
   const today = todayKey();
-  const index = tasks.findIndex(task => task.id === id);
+  const items = [...currentItems()];
+  const index = items.findIndex(item => item.id === id);
   if (index < 0) return;
 
-  const currentTask = tasks[index];
-  const nextDone = !currentTask.done;
-  const updatedTask = { ...currentTask, done: nextDone, doneAt: nextDone ? today : null };
+  const currentItem = items[index];
+  const nextDone = !currentItem.done;
+  const updatedItem = { ...currentItem, done: nextDone, doneAt: nextDone ? today : null };
 
-  tasks.splice(index, 1);
+  items.splice(index, 1);
 
   if (nextDone) {
-    tasks.push(updatedTask);
+    items.push(updatedItem);
   } else {
-    tasks.unshift(updatedTask);
+    items.unshift(updatedItem);
   }
 
-  saveTasks();
+  setCurrentItems(items);
   renderTasks();
 }
 
 function deleteTask(id) {
-  tasks = tasks.filter(task => task.id !== id);
-  saveTasks();
+  setCurrentItems(currentItems().filter(item => item.id !== id));
   renderTasks();
 }
 
 function moveTaskToTop(id) {
-  const task = tasks.find(item => item.id === id);
-  if (!task || task.done) return;
+  const item = currentItems().find(entry => entry.id === id);
+  if (!item || item.done) return;
 
-  const openTasks = tasks.filter(item => !item.done);
-  const doneTasks = tasks.filter(item => item.done);
-  const index = openTasks.findIndex(item => item.id === id);
+  const openItems = currentItems().filter(entry => !entry.done);
+  const doneItems = currentItems().filter(entry => entry.done);
+  const index = openItems.findIndex(entry => entry.id === id);
   if (index <= 0) return;
 
-  const [movedTask] = openTasks.splice(index, 1);
-  openTasks.unshift(movedTask);
-  tasks = [...openTasks, ...doneTasks];
-
-  saveTasks();
+  const [movedItem] = openItems.splice(index, 1);
+  openItems.unshift(movedItem);
+  setCurrentItems([...openItems, ...doneItems]);
   renderTasks();
 }
 
 function moveTaskBy(id, direction) {
-  const task = tasks.find(item => item.id === id);
-  if (!task || task.done) return;
+  const item = currentItems().find(entry => entry.id === id);
+  if (!item || item.done) return;
 
-  const openTasks = tasks.filter(item => !item.done);
-  const doneTasks = tasks.filter(item => item.done);
-  const index = openTasks.findIndex(item => item.id === id);
+  const openItems = currentItems().filter(entry => !entry.done);
+  const doneItems = currentItems().filter(entry => entry.done);
+  const index = openItems.findIndex(entry => entry.id === id);
   const targetIndex = index + direction;
 
-  if (index < 0 || targetIndex < 0 || targetIndex >= openTasks.length) return;
+  if (index < 0 || targetIndex < 0 || targetIndex >= openItems.length) return;
 
-  const [movedTask] = openTasks.splice(index, 1);
-  openTasks.splice(targetIndex, 0, movedTask);
-  tasks = [...openTasks, ...doneTasks];
-
-  saveTasks();
+  const [movedItem] = openItems.splice(index, 1);
+  openItems.splice(targetIndex, 0, movedItem);
+  setCurrentItems([...openItems, ...doneItems]);
   renderTasks();
 }
 
 function getVisibleTasks() {
-  const openTasks = tasks.filter(task => !task.done);
-  const doneTasks = tasks.filter(task => task.done);
-  return [...openTasks, ...doneTasks];
+  const items = currentItems();
+  const openItems = items.filter(item => !item.done);
+  const doneItems = items.filter(item => item.done);
+  return [...openItems, ...doneItems];
 }
 
 function isRecurringDueToday(recurring) {
@@ -307,7 +348,11 @@ function setSortMode(nextMode) {
 
 function openTaskDialog(mode, task = null) {
   editingTaskId = mode === "edit" ? task.id : null;
-  dialogTitle.innerHTML = mode === "edit" ? "<mark>מה לשנות פה?</mark>" : "<mark>מה נפל עלייך עכשיו?</mark>";
+  if (mode === "edit") {
+    dialogTitle.innerHTML = "<mark>מה לשנות פה?</mark>";
+  } else {
+    dialogTitle.innerHTML = isShoppingMode() ? "<mark>מה צריך לקנות?</mark>" : "<mark>מה נפל עלייך עכשיו?</mark>";
+  }
   taskInput.value = task?.text || "";
   updateCharCount();
   taskDialog.showModal();
@@ -394,7 +439,11 @@ function closeDeleteRecurringDialog() {
 function renderTasks() {
   removeOldDoneTasks();
   taskList.innerHTML = "";
-  emptyState.hidden = tasks.length > 0;
+  const items = currentItems();
+  emptyState.hidden = items.length > 0;
+  const emptyText = emptyState.querySelector("p");
+  emptyText.innerHTML = isShoppingMode() ? "<mark>לא חסר כלום?</mark><br />חשוד." : "<mark>שקט מדי.</mark><br />מה ייפול עלי תיכף??";
+  taskList.setAttribute("aria-label", isShoppingMode() ? "רשימת קניות" : "רשימת מטלות");
 
   const visibleTasks = getVisibleTasks();
 
@@ -437,8 +486,8 @@ function renderTasks() {
       topButton.textContent = "⇈";
       topButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
       topButton.title = "הקפצה לראש";
-      const openTasksCount = tasks.filter(item => !item.done).length;
-      const openIndex = tasks.filter(item => !item.done).findIndex(item => item.id === task.id);
+      const openTasksCount = currentItems().filter(item => !item.done).length;
+      const openIndex = currentItems().filter(item => !item.done).findIndex(item => item.id === task.id);
       topButton.disabled = task.done || openIndex === 0;
       topButton.addEventListener("click", () => moveTaskToTop(task.id));
 
@@ -468,7 +517,7 @@ function renderTasks() {
       moveButton.textContent = "↑";
       moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
       moveButton.title = "הקפצה לראש";
-      const openIndex = tasks.filter(item => !item.done).findIndex(item => item.id === task.id);
+      const openIndex = currentItems().filter(item => !item.done).findIndex(item => item.id === task.id);
       moveButton.disabled = task.done || openIndex === 0;
       moveButton.addEventListener("click", () => moveTaskToTop(task.id));
 
@@ -539,7 +588,25 @@ function renderRecurringTasks() {
   });
 }
 
+function switchList(nextList) {
+  activeList = nextList;
+  if (sortMode) setSortMode(false);
+
+  const shopping = isShoppingMode();
+  document.body.classList.toggle("shopping-mode", shopping);
+  appTitle.textContent = shopping ? "שימי, תקני" : "שימי, תעשי";
+  appSubtitle.textContent = shopping ? "מה חסר?" : "מה עכשיו?";
+  tasksTab.classList.toggle("active", !shopping);
+  shoppingTab.classList.toggle("active", shopping);
+  tasksTab.setAttribute("aria-selected", String(!shopping));
+  shoppingTab.setAttribute("aria-selected", String(shopping));
+  addTaskButton.querySelector("strong").textContent = shopping ? "צריך לקנות" : "עוד מטלה";
+  renderTasks();
+}
+
 addTaskButton.addEventListener("click", () => openTaskDialog("add"));
+tasksTab.addEventListener("click", () => switchList("tasks"));
+shoppingTab.addEventListener("click", () => switchList("shopping"));
 sortModeButton.addEventListener("click", () => setSortMode(!sortMode));
 closeDialogButton.addEventListener("click", closeTaskDialog);
 taskInput.addEventListener("input", updateCharCount);
@@ -566,7 +633,7 @@ confirmDeleteButton.addEventListener("click", () => {
   closeDeleteDialog();
 });
 
-recurringButton.addEventListener("click", openRecurringDialog);
+recurringButton.addEventListener("click", () => { if (!isShoppingMode()) openRecurringDialog(); });
 closeRecurringButton.addEventListener("click", closeRecurringDialog);
 addRecurringButton.addEventListener("click", () => openRecurringForm("add"));
 closeRecurringFormButton.addEventListener("click", closeRecurringForm);
@@ -612,4 +679,4 @@ window.addEventListener("keydown", event => {
 });
 
 loadTasks();
-renderTasks();
+switchList("tasks");

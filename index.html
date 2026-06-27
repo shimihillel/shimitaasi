@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v11-recurring -->
+  <!-- app-version: v12-shopping -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=12" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -23,16 +23,20 @@
       <header class="app-header">
         <span class="doodle doodle-heart" aria-hidden="true">♡</span>
         <span class="doodle doodle-star" aria-hidden="true">☆</span>
-        <h1>שימי, תעשי</h1>
+        <h1 id="appTitle">שימי, תעשי</h1>
         <div class="marker-line" aria-hidden="true"></div>
-        <p>מה עכשיו?</p>
+        <p id="appSubtitle">מה עכשיו?</p>
+        <div class="tabs" role="tablist" aria-label="בחירת רשימה">
+          <button id="tasksTab" class="tab-button active" type="button" role="tab" aria-selected="true">לעשות</button>
+          <button id="shoppingTab" class="tab-button" type="button" role="tab" aria-selected="false">לקנות</button>
+        </div>
         <div class="header-actions">
           <button id="recurringButton" class="sort-toggle mini" type="button">קבועות</button>
           <button id="sortModeButton" class="sort-toggle mini" type="button" aria-pressed="false">סדרי לי</button>
         </div>
       </header>
 
-      <section id="taskList" class="task-list" aria-label="רשימת מטלות"></section>
+      <section id="taskList" class="task-list" aria-label="רשימה"></section>
 
       <section id="emptyState" class="empty-state" hidden>
         <span class="empty-arrow" aria-hidden="true">↜</span>
@@ -133,6 +137,6 @@
     </form>
   </dialog>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
