@@ -675,3 +675,156 @@ body.shopping-mode .task-text-wrap {
     padding: 0 10px;
   }
 }
+
+/* v13 — polish: sticker tabs, foldable done, clearer sorting, tiny animations */
+.paper::before {
+  content: "נו";
+  position: absolute;
+  left: 22px;
+  bottom: 94px;
+  color: rgba(23, 21, 19, .16);
+  font-size: 34px;
+  font-weight: 950;
+  transform: rotate(-14deg);
+  pointer-events: none;
+}
+
+.paper::after {
+  content: "✦";
+  position: absolute;
+  right: 76px;
+  bottom: 82px;
+  color: rgba(255, 154, 174, .46);
+  font-size: 28px;
+  font-weight: 900;
+  transform: rotate(12deg);
+  pointer-events: none;
+}
+
+.tabs {
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tab-button {
+  position: relative;
+  min-height: 42px;
+  min-width: 96px;
+  margin: 0 -3px;
+  border: 2px solid rgba(23, 21, 19, .88);
+  border-radius: 16px 16px 9px 9px;
+  background: rgba(255,255,255,.86);
+  box-shadow: 0 3px 0 rgba(23, 21, 19, .42);
+  transform: rotate(1.2deg);
+}
+
+.tab-button:nth-child(2) {
+  transform: rotate(-1.3deg);
+}
+
+.tab-button.active {
+  background: var(--yellow);
+  transform: translateY(2px) rotate(-.4deg);
+  box-shadow: 0 1px 0 rgba(23, 21, 19, .42);
+  z-index: 2;
+}
+
+body.shopping-mode .tab-button.active {
+  background: var(--pink);
+}
+
+.sort-hint {
+  width: fit-content;
+  max-width: 100%;
+  margin: 10px auto 0;
+  padding: 8px 12px;
+  border: 1.7px dashed rgba(23, 21, 19, .72);
+  border-radius: 14px;
+  background: rgba(255, 231, 124, .34);
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 800;
+  transform: rotate(-.8deg);
+}
+
+.sort-mode .paper {
+  background:
+    repeating-linear-gradient(to bottom, transparent 0, transparent 47px, var(--line) 48px, transparent 49px),
+    linear-gradient(90deg, rgba(255,255,255,.55), rgba(255,255,255,0) 16%, rgba(255,255,255,0)),
+    linear-gradient(rgba(255, 231, 124, .10), rgba(255, 231, 124, .10)),
+    var(--paper);
+}
+
+.task-row {
+  transition: background .16s ease, opacity .16s ease, transform .16s ease;
+}
+
+.task-row:active {
+  background: rgba(255, 231, 124, .13);
+}
+
+.done-block {
+  margin-top: 12px;
+  padding-top: 4px;
+}
+
+.done-toggle {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 10px;
+  border: 0;
+  border-top: 1.5px dashed rgba(23, 21, 19, .28);
+  border-bottom: 1.5px dashed rgba(23, 21, 19, .16);
+  background: rgba(255, 255, 255, .36);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.done-toggle strong {
+  color: rgba(23, 21, 19, .64);
+  font-size: 15px;
+}
+
+.done-toggle span {
+  min-width: 58px;
+  min-height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 201, 214, .38);
+  color: var(--ink);
+}
+
+.done-list .task-row {
+  opacity: .72;
+}
+
+body.shopping-mode .dialog-card .hint::after {
+  content: " · בקניות אפשר להוסיף כמה ברצף";
+}
+
+body.shopping-mode #taskDialog .save-button {
+  background: var(--yellow);
+}
+
+@media (max-width: 380px) {
+  .tab-button {
+    min-width: 84px;
+  }
+  .sort-hint {
+    font-size: 13px;
+  }
+  .done-toggle {
+    padding-inline: 4px;
+  }
+}

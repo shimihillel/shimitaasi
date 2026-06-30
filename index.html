@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v12-shopping -->
+  <!-- app-version: v13-polish -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=12" />
+  <link rel="stylesheet" href="style.css?v=13" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -34,6 +34,7 @@
           <button id="recurringButton" class="sort-toggle mini" type="button">קבועות</button>
           <button id="sortModeButton" class="sort-toggle mini" type="button" aria-pressed="false">סדרי לי</button>
         </div>
+        <p id="sortHint" class="sort-hint" hidden>מצב סידור פעיל · תעלי, תורידי, ואז סיימתי</p>
       </header>
 
       <section id="taskList" class="task-list" aria-label="רשימה"></section>
@@ -137,6 +138,6 @@
     </form>
   </dialog>
 
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>

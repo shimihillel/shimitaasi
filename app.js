@@ -23,6 +23,7 @@ const appTitle = document.getElementById("appTitle");
 const appSubtitle = document.getElementById("appSubtitle");
 const tasksTab = document.getElementById("tasksTab");
 const shoppingTab = document.getElementById("shoppingTab");
+const sortHint = document.getElementById("sortHint");
 
 const recurringButton = document.getElementById("recurringButton");
 const recurringDialog = document.getElementById("recurringDialog");
@@ -52,6 +53,7 @@ let sortMode = false;
 let activeList = "tasks";
 let editingRecurringId = null;
 let deletingRecurringId = null;
+let doneCollapsed = { tasks: false, shopping: false };
 
 const weekdayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
@@ -343,6 +345,7 @@ function setSortMode(nextMode) {
   document.body.classList.toggle("sort-mode", sortMode);
   sortModeButton.textContent = sortMode ? "סיימתי" : "סדרי לי";
   sortModeButton.setAttribute("aria-pressed", String(sortMode));
+  if (sortHint) sortHint.hidden = !sortMode;
   renderTasks();
 }
 
@@ -350,8 +353,13 @@ function openTaskDialog(mode, task = null) {
   editingTaskId = mode === "edit" ? task.id : null;
   if (mode === "edit") {
     dialogTitle.innerHTML = "<mark>מה לשנות פה?</mark>";
+    taskForm.querySelector(".save-button").textContent = "שימי, תעשי";
+  } else if (isShoppingMode()) {
+    dialogTitle.innerHTML = "<mark>מה חסר?</mark>";
+    taskForm.querySelector(".save-button").textContent = "+ עוד אחד";
   } else {
-    dialogTitle.innerHTML = isShoppingMode() ? "<mark>מה צריך לקנות?</mark>" : "<mark>מה נפל עלייך עכשיו?</mark>";
+    dialogTitle.innerHTML = "<mark>מה נפל עלייך עכשיו?</mark>";
+    taskForm.querySelector(".save-button").textContent = "שימי, תעשי";
   }
   taskInput.value = task?.text || "";
   updateCharCount();
@@ -436,6 +444,103 @@ function closeDeleteRecurringDialog() {
   deleteRecurringDialog.close();
 }
 
+function createTaskRow(task) {
+  const row = document.createElement("article");
+  row.className = `task-row${task.done ? " done" : ""}`;
+
+  const checkButton = document.createElement("button");
+  checkButton.className = "check-button";
+  checkButton.type = "button";
+  checkButton.setAttribute("aria-label", task.done ? "בטלי ביצוע" : "סמני שבוצע");
+  checkButton.innerHTML = '<span class="check-shape" aria-hidden="true"></span>';
+  checkButton.addEventListener("click", () => toggleDone(task.id));
+
+  const textWrap = document.createElement("div");
+  textWrap.className = "task-text-wrap";
+
+  const taskText = document.createElement("button");
+  taskText.className = "task-text";
+  taskText.type = "button";
+  taskText.textContent = task.text;
+  taskText.setAttribute("aria-label", "פתיחת המטלה המלאה");
+  taskText.addEventListener("click", () => openViewTaskDialog(task));
+
+  const taskDate = document.createElement("div");
+  taskDate.className = "task-date";
+  taskDate.textContent = formatDateLabel(task.createdAt);
+
+  textWrap.append(taskText, taskDate);
+
+  const actions = document.createElement("div");
+  actions.className = "task-actions";
+
+  if (sortMode) {
+    row.classList.add("sorting");
+
+    const openItems = currentItems().filter(item => !item.done);
+    const openTasksCount = openItems.length;
+    const openIndex = openItems.findIndex(item => item.id === task.id);
+
+    const topButton = document.createElement("button");
+    topButton.className = "action-button move top";
+    topButton.type = "button";
+    topButton.textContent = "⇈";
+    topButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
+    topButton.title = "הקפצה לראש";
+    topButton.disabled = task.done || openIndex === 0;
+    topButton.addEventListener("click", () => moveTaskToTop(task.id));
+
+    const upButton = document.createElement("button");
+    upButton.className = "action-button move up";
+    upButton.type = "button";
+    upButton.textContent = "↑";
+    upButton.setAttribute("aria-label", "העלי מטלה מקום אחד");
+    upButton.title = "לעלות מקום";
+    upButton.disabled = task.done || openIndex === 0;
+    upButton.addEventListener("click", () => moveTaskBy(task.id, -1));
+
+    const downButton = document.createElement("button");
+    downButton.className = "action-button move down";
+    downButton.type = "button";
+    downButton.textContent = "↓";
+    downButton.setAttribute("aria-label", "הורידי מטלה מקום אחד");
+    downButton.title = "להוריד מקום";
+    downButton.disabled = task.done || openIndex === openTasksCount - 1;
+    downButton.addEventListener("click", () => moveTaskBy(task.id, 1));
+
+    actions.append(topButton, upButton, downButton);
+  } else {
+    const moveButton = document.createElement("button");
+    moveButton.className = "action-button move";
+    moveButton.type = "button";
+    moveButton.textContent = "↑";
+    moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
+    moveButton.title = "הקפצה לראש";
+    const openIndex = currentItems().filter(item => !item.done).findIndex(item => item.id === task.id);
+    moveButton.disabled = task.done || openIndex === 0;
+    moveButton.addEventListener("click", () => moveTaskToTop(task.id));
+
+    const editButton = document.createElement("button");
+    editButton.className = "action-button edit";
+    editButton.type = "button";
+    editButton.textContent = "✎";
+    editButton.setAttribute("aria-label", "עריכת מטלה");
+    editButton.addEventListener("click", () => openTaskDialog("edit", task));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "action-button delete";
+    deleteButton.type = "button";
+    deleteButton.textContent = "×";
+    deleteButton.setAttribute("aria-label", "מחיקת מטלה");
+    deleteButton.addEventListener("click", () => openDeleteDialog(task.id));
+
+    actions.append(moveButton, editButton, deleteButton);
+  }
+
+  row.append(checkButton, textWrap, actions);
+  return row;
+}
+
 function renderTasks() {
   removeOldDoneTasks();
   taskList.innerHTML = "";
@@ -445,101 +550,36 @@ function renderTasks() {
   emptyText.innerHTML = isShoppingMode() ? "<mark>לא חסר כלום?</mark><br />חשוד." : "<mark>שקט מדי.</mark><br />מה ייפול עלי תיכף??";
   taskList.setAttribute("aria-label", isShoppingMode() ? "רשימת קניות" : "רשימת מטלות");
 
-  const visibleTasks = getVisibleTasks();
+  const openItems = items.filter(item => !item.done);
+  const doneItems = items.filter(item => item.done);
 
-  visibleTasks.forEach(task => {
-    const row = document.createElement("article");
-    row.className = `task-row${task.done ? " done" : ""}`;
+  openItems.forEach(task => taskList.appendChild(createTaskRow(task)));
 
-    const checkButton = document.createElement("button");
-    checkButton.className = "check-button";
-    checkButton.type = "button";
-    checkButton.setAttribute("aria-label", task.done ? "בטלי ביצוע" : "סמני שבוצע");
-    checkButton.innerHTML = '<span class="check-shape" aria-hidden="true"></span>';
-    checkButton.addEventListener("click", () => toggleDone(task.id));
+  if (doneItems.length > 0) {
+    const doneBlock = document.createElement("section");
+    doneBlock.className = "done-block";
 
-    const textWrap = document.createElement("div");
-    textWrap.className = "task-text-wrap";
+    const doneToggle = document.createElement("button");
+    doneToggle.className = "done-toggle";
+    doneToggle.type = "button";
+    const collapsed = doneCollapsed[activeList];
+    doneToggle.setAttribute("aria-expanded", String(!collapsed));
+    doneToggle.innerHTML = `<span>${collapsed ? "פתחי" : "קפלי"}</span><strong>בוצעו ונזרקו למטה · ${doneItems.length}</strong>`;
+    doneToggle.addEventListener("click", () => {
+      doneCollapsed[activeList] = !doneCollapsed[activeList];
+      renderTasks();
+    });
+    doneBlock.appendChild(doneToggle);
 
-    const taskText = document.createElement("button");
-    taskText.className = "task-text";
-    taskText.type = "button";
-    taskText.textContent = task.text;
-    taskText.setAttribute("aria-label", "פתיחת המטלה המלאה");
-    taskText.addEventListener("click", () => openViewTaskDialog(task));
-
-    const taskDate = document.createElement("div");
-    taskDate.className = "task-date";
-    taskDate.textContent = formatDateLabel(task.createdAt);
-
-    textWrap.append(taskText, taskDate);
-
-    const actions = document.createElement("div");
-    actions.className = "task-actions";
-
-    if (sortMode) {
-      row.classList.add("sorting");
-
-      const topButton = document.createElement("button");
-      topButton.className = "action-button move top";
-      topButton.type = "button";
-      topButton.textContent = "⇈";
-      topButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
-      topButton.title = "הקפצה לראש";
-      const openTasksCount = currentItems().filter(item => !item.done).length;
-      const openIndex = currentItems().filter(item => !item.done).findIndex(item => item.id === task.id);
-      topButton.disabled = task.done || openIndex === 0;
-      topButton.addEventListener("click", () => moveTaskToTop(task.id));
-
-      const upButton = document.createElement("button");
-      upButton.className = "action-button move up";
-      upButton.type = "button";
-      upButton.textContent = "↑";
-      upButton.setAttribute("aria-label", "העלי מטלה מקום אחד");
-      upButton.title = "לעלות מקום";
-      upButton.disabled = task.done || openIndex === 0;
-      upButton.addEventListener("click", () => moveTaskBy(task.id, -1));
-
-      const downButton = document.createElement("button");
-      downButton.className = "action-button move down";
-      downButton.type = "button";
-      downButton.textContent = "↓";
-      downButton.setAttribute("aria-label", "הורידי מטלה מקום אחד");
-      downButton.title = "להוריד מקום";
-      downButton.disabled = task.done || openIndex === openTasksCount - 1;
-      downButton.addEventListener("click", () => moveTaskBy(task.id, 1));
-
-      actions.append(topButton, upButton, downButton);
-    } else {
-      const moveButton = document.createElement("button");
-      moveButton.className = "action-button move";
-      moveButton.type = "button";
-      moveButton.textContent = "↑";
-      moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
-      moveButton.title = "הקפצה לראש";
-      const openIndex = currentItems().filter(item => !item.done).findIndex(item => item.id === task.id);
-      moveButton.disabled = task.done || openIndex === 0;
-      moveButton.addEventListener("click", () => moveTaskToTop(task.id));
-
-      const editButton = document.createElement("button");
-      editButton.className = "action-button edit";
-      editButton.type = "button";
-      editButton.textContent = "✎";
-      editButton.setAttribute("aria-label", "עריכת מטלה");
-      editButton.addEventListener("click", () => openTaskDialog("edit", task));
-
-      const deleteButton = document.createElement("button");
-      deleteButton.className = "action-button delete";
-      deleteButton.type = "button";
-      deleteButton.textContent = "×";
-      deleteButton.setAttribute("aria-label", "מחיקת מטלה");
-      deleteButton.addEventListener("click", () => openDeleteDialog(task.id));
-
-      actions.append(moveButton, editButton, deleteButton);
+    if (!collapsed) {
+      const doneList = document.createElement("div");
+      doneList.className = "done-list";
+      doneItems.forEach(task => doneList.appendChild(createTaskRow(task)));
+      doneBlock.appendChild(doneList);
     }
-    row.append(checkButton, textWrap, actions);
-    taskList.appendChild(row);
-  });
+
+    taskList.appendChild(doneBlock);
+  }
 }
 
 function renderRecurringTasks() {
@@ -618,11 +658,19 @@ taskForm.addEventListener("submit", event => {
 
   if (editingTaskId) {
     updateTask(editingTaskId, text);
-  } else {
-    createTask(text);
+    closeTaskDialog();
+    return;
   }
 
-  closeTaskDialog();
+  createTask(text);
+
+  if (isShoppingMode()) {
+    taskInput.value = "";
+    updateCharCount();
+    setTimeout(() => taskInput.focus(), 30);
+  } else {
+    closeTaskDialog();
+  }
 });
 
 cancelDeleteButton.addEventListener("click", closeDeleteDialog);
