@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v14-to-bottom -->
+  <!-- app-version: v15-upgrades -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=14" />
+  <link rel="stylesheet" href="style.css?v=15" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -32,6 +32,8 @@
         </div>
         <div class="header-actions">
           <button id="recurringButton" class="sort-toggle mini" type="button">קבועות</button>
+          <button id="backupButton" class="sort-toggle mini" type="button">גיבוי</button>
+          <button id="styleButton" class="sort-toggle mini" type="button">סטייל</button>
           <button id="sortModeButton" class="sort-toggle mini" type="button" aria-pressed="false">סדרי לי</button>
         </div>
         <p id="sortHint" class="sort-hint" hidden>מצב סידור פעיל · לראש, למעלה, למטה או לסוף</p>
@@ -56,8 +58,16 @@
       <button class="icon-close" id="closeDialogButton" type="button" aria-label="סגירה">×</button>
       <h2 id="dialogTitle"><mark>מה נפל עלייך עכשיו?</mark></h2>
       <label class="sr-only" for="taskInput">טקסט המטלה</label>
-      <textarea id="taskInput" rows="3" maxlength="500" placeholder="כתוב פה..." required></textarea>
-      <p class="hint"><span id="charCount">0</span>/500</p>
+      <textarea id="taskInput" rows="3" maxlength="900" placeholder="כתוב פה..." required></textarea>
+      <div id="effortField" class="effort-field">
+        <p class="field-label">כמה זה מרגיש?</p>
+        <div class="effort-options" role="radiogroup" aria-label="סוג מטלה">
+          <label><input type="radio" name="effort" value="normal" checked /> רגילה</label>
+          <label><input type="radio" name="effort" value="small" /> קטנה</label>
+          <label><input type="radio" name="effort" value="heavy" /> כבדה</label>
+        </div>
+      </div>
+      <p class="hint"><span id="charCount">0</span>/900</p>
       <button class="save-button" type="submit">שימי, תעשי</button>
     </form>
   </dialog>
@@ -138,6 +148,34 @@
     </form>
   </dialog>
 
-  <script src="app.js?v=14"></script>
+
+
+  <dialog id="backupDialog" class="dialog small-dialog">
+    <div class="dialog-card confirm-card">
+      <button class="icon-close" id="closeBackupButton" type="button" aria-label="סגירה">×</button>
+      <h2><mark>גיבוי ושחזור</mark></h2>
+      <p class="backup-copy">שומרות את המוח הקטן שלך בקובץ, ליתר ביטחון.</p>
+      <div class="backup-actions">
+        <button class="save-button" id="exportBackupButton" type="button">להוריד גיבוי</button>
+        <label class="import-label" for="importBackupInput">להעלות שחזור</label>
+        <input id="importBackupInput" class="sr-only" type="file" accept="application/json,.json" />
+      </div>
+      <p id="backupStatus" class="hint backup-status"></p>
+    </div>
+  </dialog>
+
+  <dialog id="styleDialog" class="dialog small-dialog">
+    <div class="dialog-card confirm-card">
+      <button class="icon-close" id="closeStyleButton" type="button" aria-label="סגירה">×</button>
+      <h2><mark>צבע מחברת</mark></h2>
+      <div class="theme-options" role="radiogroup" aria-label="בחירת צבע מחברת">
+        <button class="theme-button cream" data-theme="cream" type="button">שמנת קשקושים</button>
+        <button class="theme-button pink" data-theme="pink" type="button">ורוד עייף</button>
+        <button class="theme-button green" data-theme="green" type="button">ירקרק מחברת</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js?v=15"></script>
 </body>
 </html>

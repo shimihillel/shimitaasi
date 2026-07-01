@@ -1,6 +1,7 @@
 const STORAGE_KEY = "shimi-taasi-tasks-v1";
 const SHOPPING_STORAGE_KEY = "shimi-taasi-shopping-v1";
 const RECURRING_STORAGE_KEY = "shimi-taasi-recurring-v1";
+const THEME_STORAGE_KEY = "shimi-taasi-theme-v1";
 
 const taskList = document.getElementById("taskList");
 const emptyState = document.getElementById("emptyState");
@@ -24,6 +25,16 @@ const appSubtitle = document.getElementById("appSubtitle");
 const tasksTab = document.getElementById("tasksTab");
 const shoppingTab = document.getElementById("shoppingTab");
 const sortHint = document.getElementById("sortHint");
+const backupButton = document.getElementById("backupButton");
+const backupDialog = document.getElementById("backupDialog");
+const closeBackupButton = document.getElementById("closeBackupButton");
+const exportBackupButton = document.getElementById("exportBackupButton");
+const importBackupInput = document.getElementById("importBackupInput");
+const backupStatus = document.getElementById("backupStatus");
+const styleButton = document.getElementById("styleButton");
+const styleDialog = document.getElementById("styleDialog");
+const closeStyleButton = document.getElementById("closeStyleButton");
+const effortField = document.getElementById("effortField");
 
 const recurringButton = document.getElementById("recurringButton");
 const recurringDialog = document.getElementById("recurringDialog");
@@ -54,6 +65,7 @@ let activeList = "tasks";
 let editingRecurringId = null;
 let deletingRecurringId = null;
 let doneCollapsed = { tasks: false, shopping: false };
+let currentTheme = "cream";
 
 const weekdayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
@@ -130,6 +142,9 @@ function loadTasks() {
     recurringTasks = [];
   }
 
+  currentTheme = localStorage.getItem(THEME_STORAGE_KEY) || "cream";
+  applyTheme(currentTheme);
+
   removeOldDoneTasks();
   generateDueRecurringTasks();
   saveTasks();
@@ -155,13 +170,14 @@ function removeOldDoneTasks() {
   shoppingItems = shoppingItems.filter(item => !item.done || item.doneAt === today);
 }
 
-function createTask(text, recurringId = null) {
+function createTask(text, recurringId = null, effort = "normal") {
   const newItem = {
     id: `item-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     text: text.trim(),
     createdAt: todayKey(),
     done: false,
     doneAt: null,
+    effort: isShoppingMode() ? "normal" : effort,
     recurringId: isShoppingMode() ? null : recurringId
   };
 
@@ -175,8 +191,8 @@ function createTask(text, recurringId = null) {
   renderTasks();
 }
 
-function updateTask(id, text) {
-  const items = currentItems().map(item => item.id === id ? { ...item, text: text.trim() } : item);
+function updateTask(id, text, effort = null) {
+  const items = currentItems().map(item => item.id === id ? { ...item, text: text.trim(), ...(effort ? { effort } : {}) } : item);
   setCurrentItems(items);
   renderTasks();
 }
@@ -296,6 +312,7 @@ function generateDueRecurringTasks() {
       createdAt: today,
       done: false,
       doneAt: null,
+      effort: recurring.effort || "normal",
       recurringId: recurring.id
     });
 
@@ -356,6 +373,122 @@ function deleteRecurringTask(id) {
   renderRecurringTasks();
 }
 
+
+function setRecurringEnabled(id, enabled) {
+  recurringTasks = recurringTasks.map(item => item.id === id ? { ...item, enabled } : item);
+  saveRecurringTasks();
+  generateDueRecurringTasks();
+  renderRecurringTasks();
+  renderTasks();
+}
+
+function clearDoneItems() {
+  const items = currentItems();
+  const hasDone = items.some(item => item.done);
+  if (!hasDone) return;
+  const ok = window.confirm(isShoppingMode() ? "לנקות את כל מה שכבר נקנה?" : "לנקות את כל מה שכבר בוצע?");
+  if (!ok) return;
+  setCurrentItems(items.filter(item => !item.done));
+  doneCollapsed[activeList] = false;
+  renderTasks();
+}
+
+function applyTheme(theme) {
+  currentTheme = ["cream", "pink", "green"].includes(theme) ? theme : "cream";
+  document.body.dataset.theme = currentTheme;
+  localStorage.setItem(THEME_STORAGE_KEY, currentTheme);
+}
+
+function openBackupDialog() {
+  backupStatus.textContent = "";
+  backupDialog.showModal();
+}
+
+function closeBackupDialog() {
+  backupDialog.close();
+  backupStatus.textContent = "";
+  importBackupInput.value = "";
+}
+
+function exportBackup() {
+  const data = {
+    app: "shimi-taasi",
+    version: 15,
+    exportedAt: new Date().toISOString(),
+    tasks,
+    shoppingItems,
+    recurringTasks,
+    theme: currentTheme
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `shimi-taasi-backup-${todayKey()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  backupStatus.textContent = "הגיבוי ירד. לשמור במקום שלא ייעלם, כן?";
+}
+
+function importBackupFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result || "{}"));
+      if (!Array.isArray(data.tasks) || !Array.isArray(data.shoppingItems) || !Array.isArray(data.recurringTasks)) {
+        throw new Error("bad backup");
+      }
+      const ok = window.confirm("השחזור יחליף את מה שיש עכשיו באפליקציה. להמשיך?");
+      if (!ok) return;
+      tasks = data.tasks;
+      shoppingItems = data.shoppingItems;
+      recurringTasks = data.recurringTasks;
+      applyTheme(data.theme || "cream");
+      removeOldDoneTasks();
+      generateDueRecurringTasks();
+      saveTasks();
+      saveShoppingItems();
+      saveRecurringTasks();
+      renderTasks();
+      renderRecurringTasks();
+      backupStatus.textContent = "שוחזר. המוח חזר למקום.";
+    } catch (error) {
+      backupStatus.textContent = "הקובץ הזה לא נראה כמו גיבוי תקין.";
+    } finally {
+      importBackupInput.value = "";
+    }
+  };
+  reader.readAsText(file);
+}
+
+function openStyleDialog() {
+  styleDialog.showModal();
+}
+
+function closeStyleDialog() {
+  styleDialog.close();
+}
+
+function getSelectedEffort() {
+  const checked = taskForm.querySelector('input[name="effort"]:checked');
+  return checked ? checked.value : "normal";
+}
+
+function setSelectedEffort(value) {
+  const next = value || "normal";
+  const input = taskForm.querySelector(`input[name="effort"][value="${next}"]`) || taskForm.querySelector('input[name="effort"][value="normal"]');
+  if (input) input.checked = true;
+}
+
+function createShoppingItemsFromText(text) {
+  const lines = text.split(/\n+/).map(line => line.trim()).filter(Boolean);
+  const uniqueLines = lines.length ? lines : [text.trim()];
+  uniqueLines.reverse().forEach(line => createTask(line));
+}
+
 function setSortMode(nextMode) {
   sortMode = nextMode;
   document.body.classList.toggle("sort-mode", sortMode);
@@ -377,6 +510,9 @@ function openTaskDialog(mode, task = null) {
     dialogTitle.innerHTML = "<mark>מה נפל עלייך עכשיו?</mark>";
     taskForm.querySelector(".save-button").textContent = "שימי, תעשי";
   }
+  effortField.hidden = isShoppingMode();
+  setSelectedEffort(task?.effort || "normal");
+  taskInput.placeholder = isShoppingMode() && mode !== "edit" ? "אפשר גם כמה שורות:\nחלב\nביצים\nמגבונים" : "כתוב פה...";
   taskInput.value = task?.text || "";
   updateCharCount();
   taskDialog.showModal();
@@ -387,6 +523,7 @@ function closeTaskDialog() {
   taskDialog.close();
   editingTaskId = null;
   taskForm.reset();
+  setSelectedEffort("normal");
   updateCharCount();
 }
 
@@ -485,7 +622,17 @@ function createTaskRow(task) {
   taskDate.className = "task-date";
   taskDate.textContent = formatDateLabel(task.createdAt);
 
-  textWrap.append(taskText, taskDate);
+  const metaWrap = document.createElement("div");
+  metaWrap.className = "task-meta";
+  metaWrap.appendChild(taskDate);
+  if (!isShoppingMode() && task.effort && task.effort !== "normal") {
+    const effortChip = document.createElement("span");
+    effortChip.className = `effort-chip ${task.effort}`;
+    effortChip.textContent = task.effort === "heavy" ? "כבדה" : "קטנה";
+    metaWrap.appendChild(effortChip);
+  }
+
+  textWrap.append(taskText, metaWrap);
 
   const actions = document.createElement("div");
   actions.className = "task-actions";
@@ -545,6 +692,14 @@ function createTaskRow(task) {
     moveButton.disabled = task.done || openIndex === 0;
     moveButton.addEventListener("click", () => moveTaskToTop(task.id));
 
+    const toggleButton = document.createElement("button");
+    toggleButton.className = "action-button toggle-recurring";
+    toggleButton.type = "button";
+    toggleButton.textContent = recurring.enabled === false ? "○" : "●";
+    toggleButton.setAttribute("aria-label", recurring.enabled === false ? "הפעילי קבועה" : "כבי קבועה זמנית");
+    toggleButton.title = recurring.enabled === false ? "להפעיל" : "לכבות זמנית";
+    toggleButton.addEventListener("click", () => setRecurringEnabled(recurring.id, recurring.enabled === false));
+
     const editButton = document.createElement("button");
     editButton.className = "action-button edit";
     editButton.type = "button";
@@ -589,12 +744,21 @@ function renderTasks() {
     doneToggle.type = "button";
     const collapsed = doneCollapsed[activeList];
     doneToggle.setAttribute("aria-expanded", String(!collapsed));
-    doneToggle.innerHTML = `<span>${collapsed ? "פתחי" : "קפלי"}</span><strong>בוצעו ונזרקו למטה · ${doneItems.length}</strong>`;
+    doneToggle.innerHTML = `<span>${collapsed ? "פתחי" : "קפלי"}</span><strong>${isShoppingMode() ? "נקנו ונזרקו למטה" : "בוצעו ונזרקו למטה"} · ${doneItems.length}</strong>`;
     doneToggle.addEventListener("click", () => {
       doneCollapsed[activeList] = !doneCollapsed[activeList];
       renderTasks();
     });
-    doneBlock.appendChild(doneToggle);
+    const clearDoneButton = document.createElement("button");
+    clearDoneButton.className = "clear-done-button";
+    clearDoneButton.type = "button";
+    clearDoneButton.textContent = "לנקות עכשיו";
+    clearDoneButton.addEventListener("click", clearDoneItems);
+
+    const doneHeader = document.createElement("div");
+    doneHeader.className = "done-header";
+    doneHeader.append(doneToggle, clearDoneButton);
+    doneBlock.appendChild(doneHeader);
 
     if (!collapsed) {
       const doneList = document.createElement("div");
@@ -620,18 +784,26 @@ function renderRecurringTasks() {
 
   recurringTasks.forEach(recurring => {
     const row = document.createElement("article");
-    row.className = "recurring-row";
+    row.className = `recurring-row${recurring.enabled === false ? " disabled" : ""}`;
 
     const text = document.createElement("div");
     text.className = "recurring-text";
     const title = document.createElement("strong");
     title.textContent = recurring.text;
     const meta = document.createElement("span");
-    meta.textContent = frequencyLabel(recurring);
+    meta.textContent = `${frequencyLabel(recurring)} · ${recurring.enabled === false ? "כבויה" : "פעילה"}`;
     text.append(title, meta);
 
     const actions = document.createElement("div");
     actions.className = "recurring-actions";
+
+    const toggleButton = document.createElement("button");
+    toggleButton.className = "action-button toggle-recurring";
+    toggleButton.type = "button";
+    toggleButton.textContent = recurring.enabled === false ? "○" : "●";
+    toggleButton.setAttribute("aria-label", recurring.enabled === false ? "הפעילי קבועה" : "כבי קבועה זמנית");
+    toggleButton.title = recurring.enabled === false ? "להפעיל" : "לכבות זמנית";
+    toggleButton.addEventListener("click", () => setRecurringEnabled(recurring.id, recurring.enabled === false));
 
     const editButton = document.createElement("button");
     editButton.className = "action-button edit";
@@ -647,7 +819,7 @@ function renderRecurringTasks() {
     deleteButton.setAttribute("aria-label", "מחיקת קבועה");
     deleteButton.addEventListener("click", () => openDeleteRecurringDialog(recurring.id));
 
-    actions.append(editButton, deleteButton);
+    actions.append(toggleButton, editButton, deleteButton);
     row.append(text, actions);
     recurringList.appendChild(row);
   });
@@ -673,6 +845,18 @@ addTaskButton.addEventListener("click", () => openTaskDialog("add"));
 tasksTab.addEventListener("click", () => switchList("tasks"));
 shoppingTab.addEventListener("click", () => switchList("shopping"));
 sortModeButton.addEventListener("click", () => setSortMode(!sortMode));
+backupButton.addEventListener("click", openBackupDialog);
+closeBackupButton.addEventListener("click", closeBackupDialog);
+exportBackupButton.addEventListener("click", exportBackup);
+importBackupInput.addEventListener("change", event => importBackupFile(event.target.files?.[0]));
+styleButton.addEventListener("click", openStyleDialog);
+closeStyleButton.addEventListener("click", closeStyleDialog);
+document.querySelectorAll(".theme-button").forEach(button => {
+  button.addEventListener("click", () => {
+    applyTheme(button.dataset.theme);
+    closeStyleDialog();
+  });
+});
 closeDialogButton.addEventListener("click", closeTaskDialog);
 taskInput.addEventListener("input", updateCharCount);
 
@@ -682,12 +866,16 @@ taskForm.addEventListener("submit", event => {
   if (!text) return;
 
   if (editingTaskId) {
-    updateTask(editingTaskId, text);
+    updateTask(editingTaskId, text, isShoppingMode() ? null : getSelectedEffort());
     closeTaskDialog();
     return;
   }
 
-  createTask(text);
+  if (isShoppingMode()) {
+    createShoppingItemsFromText(text);
+  } else {
+    createTask(text, null, getSelectedEffort());
+  }
 
   if (isShoppingMode()) {
     taskInput.value = "";
@@ -748,6 +936,8 @@ window.addEventListener("keydown", event => {
     if (recurringDialog.open) closeRecurringDialog();
     if (recurringFormDialog.open) closeRecurringForm();
     if (deleteRecurringDialog.open) closeDeleteRecurringDialog();
+    if (backupDialog.open) closeBackupDialog();
+    if (styleDialog.open) closeStyleDialog();
   }
 });
 

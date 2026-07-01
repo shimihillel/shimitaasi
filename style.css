@@ -833,3 +833,207 @@ body.shopping-mode #taskDialog .save-button {
 /* v14 — sort mode: add send-to-bottom control */
 .task-row.sorting .task-actions { gap: 0; }
 .action-button.move.bottom { transform: translateY(1px); }
+
+/* v15 — backup, effort chips, recurring pause, clear done, notebook colors */
+body[data-theme="pink"] {
+  --paper: #fff2f5;
+  --line: rgba(190, 92, 128, 0.16);
+  --margin: rgba(255, 126, 160, 0.42);
+  --yellow: #ffe78a;
+  --pink: #ffc1d1;
+  --pink-strong: #ff9eb8;
+}
+
+body[data-theme="green"] {
+  --paper: #f4fff7;
+  --line: rgba(60, 128, 98, 0.17);
+  --margin: rgba(92, 163, 128, 0.34);
+  --yellow: #fff0a3;
+  --pink: #cdeedc;
+  --pink-strong: #9fd6ba;
+}
+
+.effort-field[hidden] { display: none; }
+
+.effort-field {
+  margin: 8px 0 2px;
+  text-align: right;
+}
+
+.effort-field .field-label {
+  margin-top: 4px;
+}
+
+.effort-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.effort-options label {
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1.7px solid rgba(23, 21, 19, .48);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .78);
+  font-size: 15px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.effort-options input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.effort-options label:has(input:checked) {
+  background: var(--yellow);
+  box-shadow: inset 0 -2px 0 rgba(23, 21, 19, .14);
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.task-meta .task-date { margin-top: 0; }
+
+.effort-chip {
+  display: inline-grid;
+  place-items: center;
+  min-height: 20px;
+  padding: 0 7px 1px;
+  border-radius: 999px;
+  border: 1px solid rgba(23, 21, 19, .18);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.effort-chip.small { background: rgba(205, 238, 220, .86); }
+.effort-chip.heavy { background: rgba(255, 201, 214, .82); }
+
+.done-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  border-top: 1.5px dashed rgba(23, 21, 19, .28);
+  border-bottom: 1.5px dashed rgba(23, 21, 19, .16);
+  background: rgba(255, 255, 255, .36);
+}
+
+.done-header .done-toggle {
+  border: 0;
+  background: transparent;
+}
+
+.clear-done-button {
+  min-height: 36px;
+  padding: 0 10px;
+  margin-inline-start: 4px;
+  border: 1.5px solid rgba(23, 21, 19, .62);
+  border-radius: 999px;
+  background: rgba(255, 201, 214, .42);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.backup-copy {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.backup-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.import-label {
+  min-height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  border: 2px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(23, 21, 19, .45);
+}
+
+.backup-status {
+  min-height: 18px;
+  text-align: center;
+}
+
+.theme-options {
+  display: grid;
+  gap: 12px;
+}
+
+.theme-button {
+  min-height: 54px;
+  border: 2px solid var(--ink);
+  border-radius: 17px;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(23, 21, 19, .48);
+}
+
+.theme-button.cream { background: #fff2cd; }
+.theme-button.pink { background: #ffd4df; }
+.theme-button.green { background: #d6f2df; }
+
+.recurring-row.disabled {
+  opacity: .55;
+}
+
+.recurring-row.disabled .recurring-text strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.action-button.toggle-recurring {
+  font-size: 22px;
+}
+
+body.shopping-mode #taskDialog .effort-field {
+  display: none;
+}
+
+@media (max-width: 380px) {
+  .sort-toggle.mini {
+    min-width: 92px;
+  }
+  .header-actions {
+    gap: 6px;
+  }
+  .clear-done-button {
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+  .done-toggle strong {
+    font-size: 13px;
+  }
+  .effort-options {
+    gap: 6px;
+  }
+  .effort-options label {
+    font-size: 14px;
+  }
+}
