@@ -223,6 +223,22 @@ function moveTaskToTop(id) {
   renderTasks();
 }
 
+
+function moveTaskToBottom(id) {
+  const item = currentItems().find(entry => entry.id === id);
+  if (!item || item.done) return;
+
+  const openItems = currentItems().filter(entry => !entry.done);
+  const doneItems = currentItems().filter(entry => entry.done);
+  const index = openItems.findIndex(entry => entry.id === id);
+  if (index < 0 || index === openItems.length - 1) return;
+
+  const [movedItem] = openItems.splice(index, 1);
+  openItems.push(movedItem);
+  setCurrentItems([...openItems, ...doneItems]);
+  renderTasks();
+}
+
 function moveTaskBy(id, direction) {
   const item = currentItems().find(entry => entry.id === id);
   if (!item || item.done) return;
@@ -508,7 +524,16 @@ function createTaskRow(task) {
     downButton.disabled = task.done || openIndex === openTasksCount - 1;
     downButton.addEventListener("click", () => moveTaskBy(task.id, 1));
 
-    actions.append(topButton, upButton, downButton);
+    const bottomButton = document.createElement("button");
+    bottomButton.className = "action-button move bottom";
+    bottomButton.type = "button";
+    bottomButton.textContent = "⇊";
+    bottomButton.setAttribute("aria-label", "הורידי מטלה לסוף הרשימה");
+    bottomButton.title = "הורדה לסוף";
+    bottomButton.disabled = task.done || openIndex === openTasksCount - 1;
+    bottomButton.addEventListener("click", () => moveTaskToBottom(task.id));
+
+    actions.append(topButton, upButton, downButton, bottomButton);
   } else {
     const moveButton = document.createElement("button");
     moveButton.className = "action-button move";

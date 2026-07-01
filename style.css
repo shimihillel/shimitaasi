@@ -276,7 +276,8 @@ button { -webkit-tap-highlight-color: transparent; }
   min-width: 42px;
 }
 
-.action-button.move.top { font-size: 22px; }
+.action-button.move.top,
+.action-button.move.bottom { font-size: 22px; }
 
 .action-button[disabled] {
   opacity: .18;
@@ -828,3 +829,7 @@ body.shopping-mode #taskDialog .save-button {
     padding-inline: 4px;
   }
 }
+
+/* v14 — sort mode: add send-to-bottom control */
+.task-row.sorting .task-actions { gap: 0; }
+.action-button.move.bottom { transform: translateY(1px); }
