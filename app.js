@@ -692,13 +692,6 @@ function createTaskRow(task) {
     moveButton.disabled = task.done || openIndex === 0;
     moveButton.addEventListener("click", () => moveTaskToTop(task.id));
 
-    const toggleButton = document.createElement("button");
-    toggleButton.className = "action-button toggle-recurring";
-    toggleButton.type = "button";
-    toggleButton.textContent = recurring.enabled === false ? "○" : "●";
-    toggleButton.setAttribute("aria-label", recurring.enabled === false ? "הפעילי קבועה" : "כבי קבועה זמנית");
-    toggleButton.title = recurring.enabled === false ? "להפעיל" : "לכבות זמנית";
-    toggleButton.addEventListener("click", () => setRecurringEnabled(recurring.id, recurring.enabled === false));
 
     const editButton = document.createElement("button");
     editButton.className = "action-button edit";
@@ -797,13 +790,6 @@ function renderRecurringTasks() {
     const actions = document.createElement("div");
     actions.className = "recurring-actions";
 
-    const toggleButton = document.createElement("button");
-    toggleButton.className = "action-button toggle-recurring";
-    toggleButton.type = "button";
-    toggleButton.textContent = recurring.enabled === false ? "○" : "●";
-    toggleButton.setAttribute("aria-label", recurring.enabled === false ? "הפעילי קבועה" : "כבי קבועה זמנית");
-    toggleButton.title = recurring.enabled === false ? "להפעיל" : "לכבות זמנית";
-    toggleButton.addEventListener("click", () => setRecurringEnabled(recurring.id, recurring.enabled === false));
 
     const editButton = document.createElement("button");
     editButton.className = "action-button edit";
