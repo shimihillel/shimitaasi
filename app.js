@@ -413,7 +413,7 @@ function closeBackupDialog() {
 function exportBackup() {
   const data = {
     app: "shimi-taasi",
-    version: 15,
+    version: 17,
     exportedAt: new Date().toISOString(),
     tasks,
     shoppingItems,
@@ -790,6 +790,14 @@ function renderRecurringTasks() {
     const actions = document.createElement("div");
     actions.className = "recurring-actions";
 
+    const toggleButton = document.createElement("button");
+    toggleButton.className = "action-button recurring-toggle";
+    toggleButton.type = "button";
+    const isEnabled = recurring.enabled !== false;
+    toggleButton.textContent = isEnabled ? "⏸" : "▶";
+    toggleButton.setAttribute("aria-label", isEnabled ? "כיבוי זמני של קבועה" : "הפעלה מחדש של קבועה");
+    toggleButton.title = isEnabled ? "כיבוי זמני" : "להפעיל";
+    toggleButton.addEventListener("click", () => setRecurringEnabled(recurring.id, !isEnabled));
 
     const editButton = document.createElement("button");
     editButton.className = "action-button edit";
