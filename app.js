@@ -110,6 +110,20 @@ function daysInCurrentMonth() {
   return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 }
 
+function dateFromKey(dateKey) {
+  if (!dateKey || typeof dateKey !== "string") return null;
+  const [year, month, day] = dateKey.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
+}
+
+function daysBetweenKeys(fromKey, toKey) {
+  const fromDate = dateFromKey(fromKey);
+  const toDate = dateFromKey(toKey);
+  if (!fromDate || !toDate) return Infinity;
+  return Math.floor((toDate - fromDate) / 86400000);
+}
+
 function formatDateLabel(dateKey) {
   if (dateKey === todayKey()) return "נוסף היום";
 
@@ -285,6 +299,11 @@ function isRecurringDueToday(recurring) {
 
   if (recurring.frequency === "daily") return true;
   if (recurring.frequency === "weekly") return Number(recurring.weekday) === today.day;
+  if (recurring.frequency === "biweekly") {
+    if (Number(recurring.weekday) !== today.day) return false;
+    if (!recurring.lastGeneratedAt) return true;
+    return daysBetweenKeys(recurring.lastGeneratedAt, todayKey()) >= 14;
+  }
   if (recurring.frequency === "monthly") {
     const safeDay = Math.min(Number(recurring.monthDay) || 1, daysInCurrentMonth());
     return safeDay === today.date;
@@ -328,6 +347,7 @@ function generateDueRecurringTasks() {
 function frequencyLabel(recurring) {
   if (recurring.frequency === "daily") return "כל יום";
   if (recurring.frequency === "weekly") return `כל ${weekdayLabels[Number(recurring.weekday)] || "שבוע"}`;
+  if (recurring.frequency === "biweekly") return `פעם בשבועיים · ${weekdayLabels[Number(recurring.weekday)] || "יום קבוע"}`;
   if (recurring.frequency === "monthly") return `כל חודש ביום ${Number(recurring.monthDay) || 1}`;
   return "קבועה";
 }
@@ -413,7 +433,7 @@ function closeBackupDialog() {
 function exportBackup() {
   const data = {
     app: "shimi-taasi",
-    version: 17,
+    version: 18,
     exportedAt: new Date().toISOString(),
     tasks,
     shoppingItems,
@@ -561,7 +581,7 @@ function closeRecurringDialog() {
 }
 
 function updateRecurringScheduleVisibility() {
-  weeklyOptions.hidden = recurringFrequency.value !== "weekly";
+  weeklyOptions.hidden = !["weekly", "biweekly"].includes(recurringFrequency.value);
   monthlyOptions.hidden = recurringFrequency.value !== "monthly";
 }
 
