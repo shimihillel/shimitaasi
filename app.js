@@ -1,7 +1,8 @@
 const STORAGE_KEY = "shimi-taasi-tasks-v1";
 const SHOPPING_STORAGE_KEY = "shimi-taasi-shopping-v1";
 const RECURRING_STORAGE_KEY = "shimi-taasi-recurring-v1";
-const THEME_STORAGE_KEY = "shimi-taasi-theme-v1";
+const SUGGESTIONS_STORAGE_KEY = "shimi-taasi-suggestions-v1";
+const ACHIEVEMENT_STORAGE_KEY = "shimi-taasi-achievement-v1";
 
 const taskList = document.getElementById("taskList");
 const emptyState = document.getElementById("emptyState");
@@ -31,9 +32,13 @@ const closeBackupButton = document.getElementById("closeBackupButton");
 const exportBackupButton = document.getElementById("exportBackupButton");
 const importBackupInput = document.getElementById("importBackupInput");
 const backupStatus = document.getElementById("backupStatus");
-const styleButton = document.getElementById("styleButton");
-const styleDialog = document.getElementById("styleDialog");
-const closeStyleButton = document.getElementById("closeStyleButton");
+const smallFilterButton = document.getElementById("smallFilterButton");
+const refreshButton = document.getElementById("refreshButton");
+const refreshDialog = document.getElementById("refreshDialog");
+const refreshList = document.getElementById("refreshList");
+const closeRefreshButton = document.getElementById("closeRefreshButton");
+const suggestionsBox = document.getElementById("suggestionsBox");
+const headNote = document.getElementById("headNote");
 const effortField = document.getElementById("effortField");
 
 const recurringButton = document.getElementById("recurringButton");
@@ -65,7 +70,8 @@ let activeList = "tasks";
 let editingRecurringId = null;
 let deletingRecurringId = null;
 let doneCollapsed = { tasks: false, shopping: false };
-let currentTheme = "cream";
+let smallFilterActive = false;
+let suggestionCounts = {};
 
 const weekdayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
@@ -125,17 +131,38 @@ function daysBetweenKeys(fromKey, toKey) {
 }
 
 function formatDateLabel(dateKey) {
-  if (dateKey === todayKey()) return "נוסף היום";
+  const days = daysBetweenKeys(dateKey, todayKey());
+  if (days === 0) return "נוסף היום";
+  if (days === 1) return "נוסף אתמול";
+  if (days > 1 && days < 7) return `נוסף לפני ${days} ימים`;
+  if (days >= 7 && days < 14) return "נוסף לפני שבוע. עדיין איתנו.";
+  if (days >= 14 && days < 30) return `נוסף לפני ${days} ימים. עקשנית.`;
 
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const taskDate = new Date(year, month - 1, day);
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
-
-  if (dateKey === yKey) return "נוסף אתמול";
-  return `נוסף ${taskDate.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" })}`;
+  const parsed = dateFromKey(dateKey);
+  if (!parsed) return "נוסף מתישהו, כנראה";
+  return `נוסף ${parsed.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" })}`;
 }
+
+function dailyIndex(length, salt = 0) {
+  const today = todayKey().replaceAll("-", "");
+  return (Number(today) + salt) % length;
+}
+
+const emptyMessages = {
+  tasks: [
+    "<mark>שקט מדי.</mark><br />מה ייפול עלי תיכף??",
+    "<mark>אין כלום.</mark><br />חשוד מאוד.",
+    "<mark>וואו.</mark><br />מי זאת המאורגנת הזאת?",
+    "<mark>מחברת נקייה.</mark><br />סימן לסערה מתקרבת."
+  ],
+  shopping: [
+    "<mark>לא חסר כלום?</mark><br />חשוד.",
+    "<mark>המקרר רגוע.</mark><br />בינתיים.",
+    "<mark>אין קניות.</mark><br />שקר חמוד.",
+    "<mark>כלום לקנות?</mark><br />מי את ומה עשית לשימי?"
+  ]
+};
+
 
 function loadTasks() {
   try {
@@ -156,8 +183,12 @@ function loadTasks() {
     recurringTasks = [];
   }
 
-  currentTheme = localStorage.getItem(THEME_STORAGE_KEY) || "cream";
-  applyTheme(currentTheme);
+  try {
+    suggestionCounts = JSON.parse(localStorage.getItem(SUGGESTIONS_STORAGE_KEY)) || {};
+  } catch {
+    suggestionCounts = {};
+  }
+  document.body.dataset.theme = "cream";
 
   removeOldDoneTasks();
   generateDueRecurringTasks();
@@ -192,7 +223,8 @@ function createTask(text, recurringId = null, effort = "normal") {
     done: false,
     doneAt: null,
     effort: isShoppingMode() ? "normal" : effort,
-    recurringId: isShoppingMode() ? null : recurringId
+    recurringId: isShoppingMode() ? null : recurringId,
+    onHead: false
   };
 
   if (isShoppingMode()) {
@@ -202,6 +234,7 @@ function createTask(text, recurringId = null, effort = "normal") {
     tasks.unshift(newItem);
     saveTasks();
   }
+  if (!isShoppingMode() && !recurringId) recordSuggestion(text);
   renderTasks();
 }
 
@@ -219,7 +252,7 @@ function toggleDone(id) {
 
   const currentItem = items[index];
   const nextDone = !currentItem.done;
-  const updatedItem = { ...currentItem, done: nextDone, doneAt: nextDone ? today : null };
+  const updatedItem = { ...currentItem, done: nextDone, doneAt: nextDone ? today : null, onHead: nextDone ? false : currentItem.onHead };
 
   items.splice(index, 1);
 
@@ -230,6 +263,7 @@ function toggleDone(id) {
   }
 
   setCurrentItems(items);
+  if (nextDone) registerAchievement(currentItem);
   renderTasks();
 }
 
@@ -412,11 +446,214 @@ function clearDoneItems() {
   doneCollapsed[activeList] = false;
   renderTasks();
 }
+function normalizeSuggestion(text) {
+  return text.trim().replace(/\s+/g, " ").slice(0, 120);
+}
 
-function applyTheme(theme) {
-  currentTheme = ["cream", "pink", "green"].includes(theme) ? theme : "cream";
-  document.body.dataset.theme = currentTheme;
-  localStorage.setItem(THEME_STORAGE_KEY, currentTheme);
+function saveSuggestions() {
+  localStorage.setItem(SUGGESTIONS_STORAGE_KEY, JSON.stringify(suggestionCounts));
+}
+
+function recordSuggestion(text) {
+  const key = normalizeSuggestion(text);
+  if (!key || key.length < 2) return;
+  suggestionCounts[key] = (suggestionCounts[key] || 0) + 1;
+  saveSuggestions();
+}
+
+function getSuggestionList() {
+  return Object.entries(suggestionCounts)
+    .filter(([text, count]) => count >= 2 && !tasks.some(task => !task.done && task.text.trim() === text))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([text]) => text);
+}
+
+function renderSuggestions() {
+  if (!suggestionsBox) return;
+  suggestionsBox.innerHTML = "";
+  const show = !isShoppingMode() && !editingTaskId;
+  const suggestions = show ? getSuggestionList() : [];
+  suggestionsBox.hidden = suggestions.length === 0;
+  if (suggestions.length === 0) return;
+
+  const label = document.createElement("span");
+  label.className = "suggestions-label";
+  label.textContent = "צצות הרבה:";
+  suggestionsBox.appendChild(label);
+
+  suggestions.forEach(text => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "suggestion-chip";
+    btn.textContent = text;
+    btn.addEventListener("click", () => {
+      taskInput.value = text;
+      updateCharCount();
+      taskInput.focus();
+    });
+    suggestionsBox.appendChild(btn);
+  });
+}
+
+function setHeadTask(id) {
+  tasks = tasks.map(task => ({ ...task, onHead: task.id === id ? !task.onHead : false }));
+  saveTasks();
+  renderTasks();
+}
+
+function getHeadTask() {
+  return tasks.find(task => task.onHead && !task.done);
+}
+
+function shoppingCategory(text) {
+  const value = (text || "").toLowerCase();
+  const groups = [
+    { label: "מקרר", words: ["חלב", "גבינה", "יוגורט", "קוטג", "ביצים", "חמאה", "שמנת"] },
+    { label: "בית", words: ["מגבונים", "נייר", "סבון", "שקיות", "טישו", "אקונומיקה", "כביסה", "מרכך"] },
+    { label: "חתולים", words: ["חתול", "חתולים", "סושי", "מייפל", "חול", "אוכל לחתולים"] },
+    { label: "טיפוח", words: ["קרם", "שמפו", "מסכה", "סרום", "סבון פנים", "דאודורנט", "לק"] },
+    { label: "ילדים", words: ["שחר", "רון", "ניר", "גן", "בית ספר", "מחברת", "טושים"] }
+  ];
+  const found = groups.find(group => group.words.some(word => value.includes(word)));
+  return found ? found.label : "כללי";
+}
+
+function registerAchievement(item) {
+  const today = todayKey();
+  let data;
+  try { data = JSON.parse(localStorage.getItem(ACHIEVEMENT_STORAGE_KEY)) || {}; } catch { data = {}; }
+  if (data.date !== today) data = { date: today, count: 0, threeShown: false, heavyShown: false };
+  data.count += 1;
+
+  if (!isShoppingMode() && item.effort === "heavy" && !data.heavyShown) {
+    data.heavyShown = true;
+    showToast("כבדה נפלה. כבוד.");
+  } else if (data.count === 3 && !data.threeShown) {
+    data.threeShown = true;
+    showToast("שלוש נסגרו. תראי אותך.");
+  }
+  localStorage.setItem(ACHIEVEMENT_STORAGE_KEY, JSON.stringify(data));
+}
+
+function showToast(message) {
+  const toast = document.createElement("div");
+  toast.className = "achievement-toast";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add("show"), 20);
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 2600);
+}
+
+function openRefreshDialog() {
+  renderRefreshList();
+  refreshDialog.showModal();
+}
+
+function closeRefreshDialog() {
+  refreshDialog.close();
+}
+
+function refreshCandidateRows() {
+  const today = todayKey();
+  const oldTasks = tasks.filter(item => !item.done && daysBetweenKeys(item.createdAt, today) >= 7);
+  const oldShopping = shoppingItems.filter(item => !item.done && daysBetweenKeys(item.createdAt, today) >= 7);
+  const disabledRecurring = recurringTasks.filter(item => item.enabled === false);
+  return { oldTasks, oldShopping, disabledRecurring };
+}
+
+function renderRefreshList() {
+  refreshList.innerHTML = "";
+  const { oldTasks, oldShopping, disabledRecurring } = refreshCandidateRows();
+  const hasAny = oldTasks.length || oldShopping.length || disabledRecurring.length;
+  if (!hasAny) {
+    const empty = document.createElement("p");
+    empty.className = "recurring-empty";
+    empty.textContent = "אין מה לרענן כרגע. מחברת יחסית מתורבתת.";
+    refreshList.appendChild(empty);
+    return;
+  }
+  addRefreshGroup("מטלות שמעלות אבק", oldTasks, "tasks");
+  addRefreshGroup("קניות שנשארו על המדף", oldShopping, "shopping");
+  addRefreshGroup("קבועות כבויות", disabledRecurring, "recurring");
+}
+
+function addRefreshGroup(title, items, type) {
+  if (!items.length) return;
+  const group = document.createElement("section");
+  group.className = "refresh-group";
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  group.appendChild(heading);
+  items.forEach(item => group.appendChild(createRefreshRow(item, type)));
+  refreshList.appendChild(group);
+}
+
+function createRefreshRow(item, type) {
+  const row = document.createElement("article");
+  row.className = "refresh-row";
+  const text = document.createElement("div");
+  text.className = "refresh-text";
+  const strong = document.createElement("strong");
+  strong.textContent = item.text;
+  const meta = document.createElement("span");
+  meta.textContent = type === "recurring" ? "קבועה כבויה" : formatDateLabel(item.createdAt);
+  text.append(strong, meta);
+
+  const actions = document.createElement("div");
+  actions.className = "refresh-actions";
+
+  if (type !== "recurring") {
+    const bottom = document.createElement("button");
+    bottom.type = "button";
+    bottom.className = "tiny-action";
+    bottom.textContent = "לסוף";
+    bottom.addEventListener("click", () => {
+      const prev = activeList;
+      activeList = type;
+      moveTaskToBottom(item.id);
+      activeList = prev;
+      renderRefreshList();
+      renderTasks();
+    });
+    actions.appendChild(bottom);
+  } else {
+    const enable = document.createElement("button");
+    enable.type = "button";
+    enable.className = "tiny-action";
+    enable.textContent = "להפעיל";
+    enable.addEventListener("click", () => {
+      setRecurringEnabled(item.id, true);
+      renderRefreshList();
+    });
+    actions.appendChild(enable);
+  }
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "tiny-action danger-lite";
+  remove.textContent = "למחוק";
+  remove.addEventListener("click", () => {
+    if (!window.confirm("למחוק את זה מהרענון?")) return;
+    if (type === "tasks") { tasks = tasks.filter(t => t.id !== item.id); saveTasks(); }
+    if (type === "shopping") { shoppingItems = shoppingItems.filter(t => t.id !== item.id); saveShoppingItems(); }
+    if (type === "recurring") { recurringTasks = recurringTasks.filter(t => t.id !== item.id); saveRecurringTasks(); }
+    renderRefreshList();
+    renderTasks();
+    renderRecurringTasks();
+  });
+  actions.appendChild(remove);
+
+  row.append(text, actions);
+  return row;
+}
+
+
+function applyTheme() {
+  document.body.dataset.theme = "cream";
 }
 
 function openBackupDialog() {
@@ -433,12 +670,12 @@ function closeBackupDialog() {
 function exportBackup() {
   const data = {
     app: "shimi-taasi",
-    version: 18,
+    version: 19,
     exportedAt: new Date().toISOString(),
     tasks,
     shoppingItems,
     recurringTasks,
-    theme: currentTheme
+    suggestions: suggestionCounts
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -466,7 +703,9 @@ function importBackupFile(file) {
       tasks = data.tasks;
       shoppingItems = data.shoppingItems;
       recurringTasks = data.recurringTasks;
-      applyTheme(data.theme || "cream");
+      suggestionCounts = data.suggestions || suggestionCounts || {};
+      saveSuggestions();
+      applyTheme();
       removeOldDoneTasks();
       generateDueRecurringTasks();
       saveTasks();
@@ -482,14 +721,6 @@ function importBackupFile(file) {
     }
   };
   reader.readAsText(file);
-}
-
-function openStyleDialog() {
-  styleDialog.showModal();
-}
-
-function closeStyleDialog() {
-  styleDialog.close();
 }
 
 function getSelectedEffort() {
@@ -531,10 +762,12 @@ function openTaskDialog(mode, task = null) {
     taskForm.querySelector(".save-button").textContent = "שימי, תעשי";
   }
   effortField.hidden = isShoppingMode();
+  renderSuggestions();
   setSelectedEffort(task?.effort || "normal");
   taskInput.placeholder = isShoppingMode() && mode !== "edit" ? "אפשר גם כמה שורות:\nחלב\nביצים\nמגבונים" : "כתוב פה...";
   taskInput.value = task?.text || "";
   updateCharCount();
+  renderSuggestions();
   taskDialog.showModal();
   setTimeout(() => taskInput.focus(), 50);
 }
@@ -545,6 +778,7 @@ function closeTaskDialog() {
   taskForm.reset();
   setSelectedEffort("normal");
   updateCharCount();
+  if (suggestionsBox) { suggestionsBox.hidden = true; suggestionsBox.innerHTML = ""; }
 }
 
 function openDeleteDialog(id) {
@@ -652,6 +886,13 @@ function createTaskRow(task) {
     metaWrap.appendChild(effortChip);
   }
 
+  if (isShoppingMode()) {
+    const categoryChip = document.createElement("span");
+    categoryChip.className = "category-chip";
+    categoryChip.textContent = shoppingCategory(task.text);
+    metaWrap.appendChild(categoryChip);
+  }
+
   textWrap.append(taskText, metaWrap);
 
   const actions = document.createElement("div");
@@ -702,6 +943,15 @@ function createTaskRow(task) {
 
     actions.append(topButton, upButton, downButton, bottomButton);
   } else {
+    const headButton = document.createElement("button");
+    headButton.className = `action-button head ${task.onHead ? "active" : ""}`;
+    headButton.type = "button";
+    headButton.textContent = "!";
+    headButton.setAttribute("aria-label", task.onHead ? "להוריד מהראש" : "לשים על הראש");
+    headButton.title = task.onHead ? "להוריד מהראש" : "על הראש";
+    headButton.hidden = isShoppingMode() || task.done;
+    headButton.addEventListener("click", () => setHeadTask(task.id));
+
     const moveButton = document.createElement("button");
     moveButton.className = "action-button move";
     moveButton.type = "button";
@@ -727,24 +977,64 @@ function createTaskRow(task) {
     deleteButton.setAttribute("aria-label", "מחיקת מטלה");
     deleteButton.addEventListener("click", () => openDeleteDialog(task.id));
 
-    actions.append(moveButton, editButton, deleteButton);
+    actions.append(headButton, moveButton, editButton, deleteButton);
   }
 
   row.append(checkButton, textWrap, actions);
   return row;
 }
 
+function renderHeadNote() {
+  if (!headNote) return;
+  headNote.innerHTML = "";
+  const headTask = getHeadTask();
+  const show = !isShoppingMode() && headTask;
+  headNote.hidden = !show;
+  if (!show) return;
+
+  const label = document.createElement("span");
+  label.textContent = "על הראש";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "head-note-button";
+  btn.textContent = headTask.text;
+  btn.addEventListener("click", () => openViewTaskDialog(headTask));
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "head-note-clear";
+  clear.textContent = "×";
+  clear.setAttribute("aria-label", "להוריד מהראש");
+  clear.addEventListener("click", () => setHeadTask(headTask.id));
+  headNote.append(label, btn, clear);
+}
+
 function renderTasks() {
   removeOldDoneTasks();
   taskList.innerHTML = "";
-  const items = currentItems();
-  emptyState.hidden = items.length > 0;
+  const rawItems = currentItems();
+  let items = rawItems;
+  const shopping = isShoppingMode();
+  smallFilterButton.hidden = shopping;
+  smallFilterButton.classList.toggle("active", smallFilterActive);
+  if (shopping && smallFilterActive) smallFilterActive = false;
+
+  if (!shopping && smallFilterActive) {
+    items = rawItems.filter(item => item.done || item.effort === "small");
+  }
+
   const emptyText = emptyState.querySelector("p");
-  emptyText.innerHTML = isShoppingMode() ? "<mark>לא חסר כלום?</mark><br />חשוד." : "<mark>שקט מדי.</mark><br />מה ייפול עלי תיכף??";
-  taskList.setAttribute("aria-label", isShoppingMode() ? "רשימת קניות" : "רשימת מטלות");
+  const messages = shopping ? emptyMessages.shopping : emptyMessages.tasks;
+  emptyText.innerHTML = messages[dailyIndex(messages.length, shopping ? 17 : 4)];
+  taskList.setAttribute("aria-label", shopping ? "רשימת קניות" : "רשימת מטלות");
+
+  renderHeadNote();
 
   const openItems = items.filter(item => !item.done);
   const doneItems = items.filter(item => item.done);
+  emptyState.hidden = rawItems.length > 0 && (!smallFilterActive || openItems.length > 0 || doneItems.length > 0);
+  if (!shopping && smallFilterActive && openItems.length === 0 && doneItems.length === 0) {
+    emptyText.innerHTML = "<mark>אין קטנות כרגע.</mark><br />רק מפלצות, כנראה.";
+  }
 
   openItems.forEach(task => taskList.appendChild(createTaskRow(task)));
 
@@ -852,6 +1142,9 @@ function switchList(nextList) {
   tasksTab.setAttribute("aria-selected", String(!shopping));
   shoppingTab.setAttribute("aria-selected", String(shopping));
   addTaskButton.querySelector("strong").textContent = shopping ? "צריך לקנות" : "עוד מטלה";
+  recurringButton.hidden = shopping;
+  smallFilterButton.hidden = shopping;
+  if (shopping) smallFilterActive = false;
   renderTasks();
 }
 
@@ -863,16 +1156,14 @@ backupButton.addEventListener("click", openBackupDialog);
 closeBackupButton.addEventListener("click", closeBackupDialog);
 exportBackupButton.addEventListener("click", exportBackup);
 importBackupInput.addEventListener("change", event => importBackupFile(event.target.files?.[0]));
-styleButton.addEventListener("click", openStyleDialog);
-closeStyleButton.addEventListener("click", closeStyleDialog);
-document.querySelectorAll(".theme-button").forEach(button => {
-  button.addEventListener("click", () => {
-    applyTheme(button.dataset.theme);
-    closeStyleDialog();
-  });
+smallFilterButton.addEventListener("click", () => {
+  smallFilterActive = !smallFilterActive;
+  renderTasks();
 });
+refreshButton.addEventListener("click", openRefreshDialog);
+closeRefreshButton.addEventListener("click", closeRefreshDialog);
 closeDialogButton.addEventListener("click", closeTaskDialog);
-taskInput.addEventListener("input", updateCharCount);
+taskInput.addEventListener("input", () => { updateCharCount(); });
 
 taskForm.addEventListener("submit", event => {
   event.preventDefault();
@@ -951,7 +1242,7 @@ window.addEventListener("keydown", event => {
     if (recurringFormDialog.open) closeRecurringForm();
     if (deleteRecurringDialog.open) closeDeleteRecurringDialog();
     if (backupDialog.open) closeBackupDialog();
-    if (styleDialog.open) closeStyleDialog();
+    if (refreshDialog.open) closeRefreshDialog();
   }
 });
 
