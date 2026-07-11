@@ -32,11 +32,15 @@ const closeBackupButton = document.getElementById("closeBackupButton");
 const exportBackupButton = document.getElementById("exportBackupButton");
 const importBackupInput = document.getElementById("importBackupInput");
 const backupStatus = document.getElementById("backupStatus");
-const smallFilterButton = document.getElementById("smallFilterButton");
-const refreshButton = document.getElementById("refreshButton");
-const refreshDialog = document.getElementById("refreshDialog");
-const refreshList = document.getElementById("refreshList");
-const closeRefreshButton = document.getElementById("closeRefreshButton");
+const futureButton = document.getElementById("futureButton");
+const futureDialog = document.getElementById("futureDialog");
+const futureList = document.getElementById("futureList");
+const closeFutureButton = document.getElementById("closeFutureButton");
+const scheduleField = document.getElementById("scheduleField");
+const scheduleDateWrap = document.getElementById("scheduleDateWrap");
+const scheduleTimeWrap = document.getElementById("scheduleTimeWrap");
+const scheduleDate = document.getElementById("scheduleDate");
+const scheduleTime = document.getElementById("scheduleTime");
 const suggestionsBox = document.getElementById("suggestionsBox");
 const headNote = document.getElementById("headNote");
 const effortField = document.getElementById("effortField");
@@ -70,7 +74,6 @@ let activeList = "tasks";
 let editingRecurringId = null;
 let deletingRecurringId = null;
 let doneCollapsed = { tasks: false, shopping: false };
-let smallFilterActive = false;
 let suggestionCounts = {};
 
 const weekdayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
@@ -128,6 +131,33 @@ function daysBetweenKeys(fromKey, toKey) {
   const toDate = dateFromKey(toKey);
   if (!fromDate || !toDate) return Infinity;
   return Math.floor((toDate - fromDate) / 86400000);
+}
+
+function isFutureTask(task) {
+  return Boolean(task && task.scheduleMode && task.scheduleMode !== "now" && task.scheduleDate && task.scheduleDate > todayKey());
+}
+
+function isTaskVisibleNow(task) {
+  return !isFutureTask(task);
+}
+
+function formatCalendarDate(dateKey, includeWeekday = true) {
+  const date = dateFromKey(dateKey);
+  if (!date) return "תאריך לא ידוע";
+  const options = includeWeekday
+    ? { weekday: "long", day: "numeric", month: "numeric" }
+    : { day: "numeric", month: "numeric" };
+  return date.toLocaleDateString("he-IL", options);
+}
+
+function formatTaskMeta(task) {
+  if (task.scheduleMode === "exact" && task.scheduleDate) {
+    return `${formatCalendarDate(task.scheduleDate)}${task.scheduleTime ? ` · ${task.scheduleTime}` : ""}`;
+  }
+  if (task.scheduleMode === "from" && task.scheduleDate) {
+    return `החל מ־${formatCalendarDate(task.scheduleDate)}`;
+  }
+  return formatDateLabel(task.createdAt);
 }
 
 function formatDateLabel(dateKey) {
@@ -215,7 +245,7 @@ function removeOldDoneTasks() {
   shoppingItems = shoppingItems.filter(item => !item.done || item.doneAt === today);
 }
 
-function createTask(text, recurringId = null, effort = "normal") {
+function createTask(text, recurringId = null, effort = "normal", schedule = null) {
   const newItem = {
     id: `item-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     text: text.trim(),
@@ -224,7 +254,10 @@ function createTask(text, recurringId = null, effort = "normal") {
     doneAt: null,
     effort: isShoppingMode() ? "normal" : effort,
     recurringId: isShoppingMode() ? null : recurringId,
-    onHead: false
+    onHead: false,
+    scheduleMode: isShoppingMode() ? "now" : (schedule?.mode || "now"),
+    scheduleDate: isShoppingMode() ? null : (schedule?.date || null),
+    scheduleTime: isShoppingMode() ? null : (schedule?.mode === "exact" ? (schedule?.time || null) : null)
   };
 
   if (isShoppingMode()) {
@@ -238,8 +271,8 @@ function createTask(text, recurringId = null, effort = "normal") {
   renderTasks();
 }
 
-function updateTask(id, text, effort = null) {
-  const items = currentItems().map(item => item.id === id ? { ...item, text: text.trim(), ...(effort ? { effort } : {}) } : item);
+function updateTask(id, text, effort = null, schedule = null) {
+  const items = currentItems().map(item => item.id === id ? { ...item, text: text.trim(), ...(effort ? { effort } : {}), ...(schedule ? { scheduleMode: schedule.mode, scheduleDate: schedule.date || null, scheduleTime: schedule.mode === "exact" ? (schedule.time || null) : null } : {}) } : item);
   setCurrentItems(items);
   renderTasks();
 }
@@ -272,51 +305,58 @@ function deleteTask(id) {
   renderTasks();
 }
 
+function splitItemsForSorting() {
+  const items = currentItems();
+  const visibleOpen = items.filter(entry => !entry.done && (isShoppingMode() || isTaskVisibleNow(entry)));
+  const hiddenFuture = isShoppingMode() ? [] : items.filter(entry => !entry.done && !isTaskVisibleNow(entry));
+  const doneItems = items.filter(entry => entry.done);
+  return { visibleOpen, hiddenFuture, doneItems };
+}
+
+function saveSortedVisibleItems(visibleOpen, hiddenFuture, doneItems) {
+  setCurrentItems([...visibleOpen, ...hiddenFuture, ...doneItems]);
+}
+
 function moveTaskToTop(id) {
   const item = currentItems().find(entry => entry.id === id);
-  if (!item || item.done) return;
+  if (!item || item.done || (!isShoppingMode() && !isTaskVisibleNow(item))) return;
 
-  const openItems = currentItems().filter(entry => !entry.done);
-  const doneItems = currentItems().filter(entry => entry.done);
-  const index = openItems.findIndex(entry => entry.id === id);
+  const { visibleOpen, hiddenFuture, doneItems } = splitItemsForSorting();
+  const index = visibleOpen.findIndex(entry => entry.id === id);
   if (index <= 0) return;
 
-  const [movedItem] = openItems.splice(index, 1);
-  openItems.unshift(movedItem);
-  setCurrentItems([...openItems, ...doneItems]);
+  const [movedItem] = visibleOpen.splice(index, 1);
+  visibleOpen.unshift(movedItem);
+  saveSortedVisibleItems(visibleOpen, hiddenFuture, doneItems);
   renderTasks();
 }
 
-
 function moveTaskToBottom(id) {
   const item = currentItems().find(entry => entry.id === id);
-  if (!item || item.done) return;
+  if (!item || item.done || (!isShoppingMode() && !isTaskVisibleNow(item))) return;
 
-  const openItems = currentItems().filter(entry => !entry.done);
-  const doneItems = currentItems().filter(entry => entry.done);
-  const index = openItems.findIndex(entry => entry.id === id);
-  if (index < 0 || index === openItems.length - 1) return;
+  const { visibleOpen, hiddenFuture, doneItems } = splitItemsForSorting();
+  const index = visibleOpen.findIndex(entry => entry.id === id);
+  if (index < 0 || index === visibleOpen.length - 1) return;
 
-  const [movedItem] = openItems.splice(index, 1);
-  openItems.push(movedItem);
-  setCurrentItems([...openItems, ...doneItems]);
+  const [movedItem] = visibleOpen.splice(index, 1);
+  visibleOpen.push(movedItem);
+  saveSortedVisibleItems(visibleOpen, hiddenFuture, doneItems);
   renderTasks();
 }
 
 function moveTaskBy(id, direction) {
   const item = currentItems().find(entry => entry.id === id);
-  if (!item || item.done) return;
+  if (!item || item.done || (!isShoppingMode() && !isTaskVisibleNow(item))) return;
 
-  const openItems = currentItems().filter(entry => !entry.done);
-  const doneItems = currentItems().filter(entry => entry.done);
-  const index = openItems.findIndex(entry => entry.id === id);
+  const { visibleOpen, hiddenFuture, doneItems } = splitItemsForSorting();
+  const index = visibleOpen.findIndex(entry => entry.id === id);
   const targetIndex = index + direction;
+  if (index < 0 || targetIndex < 0 || targetIndex >= visibleOpen.length) return;
 
-  if (index < 0 || targetIndex < 0 || targetIndex >= openItems.length) return;
-
-  const [movedItem] = openItems.splice(index, 1);
-  openItems.splice(targetIndex, 0, movedItem);
-  setCurrentItems([...openItems, ...doneItems]);
+  const [movedItem] = visibleOpen.splice(index, 1);
+  visibleOpen.splice(targetIndex, 0, movedItem);
+  saveSortedVisibleItems(visibleOpen, hiddenFuture, doneItems);
   renderTasks();
 }
 
@@ -366,7 +406,11 @@ function generateDueRecurringTasks() {
       done: false,
       doneAt: null,
       effort: recurring.effort || "normal",
-      recurringId: recurring.id
+      recurringId: recurring.id,
+      onHead: false,
+      scheduleMode: "now",
+      scheduleDate: null,
+      scheduleTime: null
     });
 
     changedTasks = true;
@@ -503,7 +547,7 @@ function setHeadTask(id) {
 }
 
 function getHeadTask() {
-  return tasks.find(task => task.onHead && !task.done);
+  return tasks.find(task => task.onHead && !task.done && isTaskVisibleNow(task));
 }
 
 function shoppingCategory(text) {
@@ -548,109 +592,105 @@ function showToast(message) {
   }, 2600);
 }
 
-function openRefreshDialog() {
-  renderRefreshList();
-  refreshDialog.showModal();
+function openFutureDialog() {
+  renderFutureList();
+  futureDialog.showModal();
 }
 
-function closeRefreshDialog() {
-  refreshDialog.close();
+function closeFutureDialog() {
+  futureDialog.close();
 }
 
-function refreshCandidateRows() {
-  const today = todayKey();
-  const oldTasks = tasks.filter(item => !item.done && daysBetweenKeys(item.createdAt, today) >= 7);
-  const oldShopping = shoppingItems.filter(item => !item.done && daysBetweenKeys(item.createdAt, today) >= 7);
-  const disabledRecurring = recurringTasks.filter(item => item.enabled === false);
-  return { oldTasks, oldShopping, disabledRecurring };
+function getFutureTasks() {
+  return tasks
+    .filter(task => !task.done && isFutureTask(task))
+    .sort((a, b) => {
+      const dateCompare = String(a.scheduleDate).localeCompare(String(b.scheduleDate));
+      if (dateCompare !== 0) return dateCompare;
+      return String(a.scheduleTime || "99:99").localeCompare(String(b.scheduleTime || "99:99"));
+    });
 }
 
-function renderRefreshList() {
-  refreshList.innerHTML = "";
-  const { oldTasks, oldShopping, disabledRecurring } = refreshCandidateRows();
-  const hasAny = oldTasks.length || oldShopping.length || disabledRecurring.length;
-  if (!hasAny) {
+function renderFutureList() {
+  futureList.innerHTML = "";
+  const futureTasks = getFutureTasks();
+  if (futureTasks.length === 0) {
     const empty = document.createElement("p");
     empty.className = "recurring-empty";
-    empty.textContent = "אין מה לרענן כרגע. מחברת יחסית מתורבתת.";
-    refreshList.appendChild(empty);
+    empty.textContent = "אין עתידיות כרגע. העתיד פנוי, איכשהו.";
+    futureList.appendChild(empty);
     return;
   }
-  addRefreshGroup("מטלות שמעלות אבק", oldTasks, "tasks");
-  addRefreshGroup("קניות שנשארו על המדף", oldShopping, "shopping");
-  addRefreshGroup("קבועות כבויות", disabledRecurring, "recurring");
+
+  const exact = futureTasks.filter(task => task.scheduleMode === "exact");
+  const from = futureTasks.filter(task => task.scheduleMode === "from");
+  addFutureGroup("בתאריך מסוים", exact);
+  addFutureGroup("החל מתאריך", from);
 }
 
-function addRefreshGroup(title, items, type) {
+function addFutureGroup(title, items) {
   if (!items.length) return;
   const group = document.createElement("section");
-  group.className = "refresh-group";
+  group.className = "future-group";
   const heading = document.createElement("h3");
   heading.textContent = title;
   group.appendChild(heading);
-  items.forEach(item => group.appendChild(createRefreshRow(item, type)));
-  refreshList.appendChild(group);
+  items.forEach(item => group.appendChild(createFutureRow(item)));
+  futureList.appendChild(group);
 }
 
-function createRefreshRow(item, type) {
+function createFutureRow(task) {
   const row = document.createElement("article");
-  row.className = "refresh-row";
+  row.className = "future-row";
   const text = document.createElement("div");
-  text.className = "refresh-text";
+  text.className = "future-text";
   const strong = document.createElement("strong");
-  strong.textContent = item.text;
+  strong.textContent = task.text;
   const meta = document.createElement("span");
-  meta.textContent = type === "recurring" ? "קבועה כבויה" : formatDateLabel(item.createdAt);
+  meta.textContent = task.scheduleMode === "exact"
+    ? `${formatCalendarDate(task.scheduleDate)}${task.scheduleTime ? ` · ${task.scheduleTime}` : ""}`
+    : `החל מ־${formatCalendarDate(task.scheduleDate)}`;
   text.append(strong, meta);
 
   const actions = document.createElement("div");
-  actions.className = "refresh-actions";
+  actions.className = "future-actions";
 
-  if (type !== "recurring") {
-    const bottom = document.createElement("button");
-    bottom.type = "button";
-    bottom.className = "tiny-action";
-    bottom.textContent = "לסוף";
-    bottom.addEventListener("click", () => {
-      const prev = activeList;
-      activeList = type;
-      moveTaskToBottom(item.id);
-      activeList = prev;
-      renderRefreshList();
-      renderTasks();
-    });
-    actions.appendChild(bottom);
-  } else {
-    const enable = document.createElement("button");
-    enable.type = "button";
-    enable.className = "tiny-action";
-    enable.textContent = "להפעיל";
-    enable.addEventListener("click", () => {
-      setRecurringEnabled(item.id, true);
-      renderRefreshList();
-    });
-    actions.appendChild(enable);
-  }
+  const showNow = document.createElement("button");
+  showNow.type = "button";
+  showNow.className = "tiny-action";
+  showNow.textContent = "להציג עכשיו";
+  showNow.addEventListener("click", () => {
+    tasks = tasks.map(item => item.id === task.id ? { ...item, scheduleMode: "now", scheduleDate: null, scheduleTime: null } : item);
+    saveTasks();
+    renderFutureList();
+    renderTasks();
+  });
+
+  const edit = document.createElement("button");
+  edit.type = "button";
+  edit.className = "tiny-action";
+  edit.textContent = "לערוך";
+  edit.addEventListener("click", () => {
+    closeFutureDialog();
+    openTaskDialog("edit", task);
+  });
 
   const remove = document.createElement("button");
   remove.type = "button";
   remove.className = "tiny-action danger-lite";
   remove.textContent = "למחוק";
   remove.addEventListener("click", () => {
-    if (!window.confirm("למחוק את זה מהרענון?")) return;
-    if (type === "tasks") { tasks = tasks.filter(t => t.id !== item.id); saveTasks(); }
-    if (type === "shopping") { shoppingItems = shoppingItems.filter(t => t.id !== item.id); saveShoppingItems(); }
-    if (type === "recurring") { recurringTasks = recurringTasks.filter(t => t.id !== item.id); saveRecurringTasks(); }
-    renderRefreshList();
+    if (!window.confirm("למחוק את העתידית הזאת?")) return;
+    tasks = tasks.filter(item => item.id !== task.id);
+    saveTasks();
+    renderFutureList();
     renderTasks();
-    renderRecurringTasks();
   });
-  actions.appendChild(remove);
 
+  actions.append(showNow, edit, remove);
   row.append(text, actions);
   return row;
 }
-
 
 function applyTheme() {
   document.body.dataset.theme = "cream";
@@ -670,7 +710,7 @@ function closeBackupDialog() {
 function exportBackup() {
   const data = {
     app: "shimi-taasi",
-    version: 19,
+    version: 20,
     exportedAt: new Date().toISOString(),
     tasks,
     shoppingItems,
@@ -734,6 +774,36 @@ function setSelectedEffort(value) {
   if (input) input.checked = true;
 }
 
+function getSelectedSchedule() {
+  const selected = taskForm.querySelector('input[name="scheduleMode"]:checked');
+  const mode = selected ? selected.value : "now";
+  if (mode === "now") return { mode: "now", date: null, time: null };
+  return {
+    mode,
+    date: scheduleDate.value || null,
+    time: mode === "exact" ? (scheduleTime.value || null) : null
+  };
+}
+
+function setSelectedSchedule(task = null) {
+  const mode = task?.scheduleMode || "now";
+  const input = taskForm.querySelector(`input[name="scheduleMode"][value="${mode}"]`) || taskForm.querySelector('input[name="scheduleMode"][value="now"]');
+  if (input) input.checked = true;
+  scheduleDate.value = task?.scheduleDate || "";
+  scheduleTime.value = task?.scheduleTime || "";
+  updateScheduleVisibility();
+}
+
+function updateScheduleVisibility() {
+  const selected = taskForm.querySelector('input[name="scheduleMode"]:checked');
+  const mode = selected ? selected.value : "now";
+  const scheduled = !isShoppingMode() && mode !== "now";
+  scheduleDateWrap.hidden = !scheduled;
+  scheduleTimeWrap.hidden = !(!isShoppingMode() && mode === "exact");
+  scheduleDate.required = scheduled;
+  if (mode !== "exact") scheduleTime.value = "";
+}
+
 function createShoppingItemsFromText(text) {
   const lines = text.split(/\n+/).map(line => line.trim()).filter(Boolean);
   const uniqueLines = lines.length ? lines : [text.trim()];
@@ -762,8 +832,10 @@ function openTaskDialog(mode, task = null) {
     taskForm.querySelector(".save-button").textContent = "שימי, תעשי";
   }
   effortField.hidden = isShoppingMode();
+  scheduleField.hidden = isShoppingMode();
   renderSuggestions();
   setSelectedEffort(task?.effort || "normal");
+  setSelectedSchedule(task);
   taskInput.placeholder = isShoppingMode() && mode !== "edit" ? "אפשר גם כמה שורות:\nחלב\nביצים\nמגבונים" : "כתוב פה...";
   taskInput.value = task?.text || "";
   updateCharCount();
@@ -777,6 +849,7 @@ function closeTaskDialog() {
   editingTaskId = null;
   taskForm.reset();
   setSelectedEffort("normal");
+  setSelectedSchedule(null);
   updateCharCount();
   if (suggestionsBox) { suggestionsBox.hidden = true; suggestionsBox.innerHTML = ""; }
 }
@@ -874,7 +947,7 @@ function createTaskRow(task) {
 
   const taskDate = document.createElement("div");
   taskDate.className = "task-date";
-  taskDate.textContent = formatDateLabel(task.createdAt);
+  taskDate.textContent = formatTaskMeta(task);
 
   const metaWrap = document.createElement("div");
   metaWrap.className = "task-meta";
@@ -901,7 +974,7 @@ function createTaskRow(task) {
   if (sortMode) {
     row.classList.add("sorting");
 
-    const openItems = currentItems().filter(item => !item.done);
+    const openItems = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item)));
     const openTasksCount = openItems.length;
     const openIndex = openItems.findIndex(item => item.id === task.id);
 
@@ -958,7 +1031,7 @@ function createTaskRow(task) {
     moveButton.textContent = "↑";
     moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
     moveButton.title = "הקפצה לראש";
-    const openIndex = currentItems().filter(item => !item.done).findIndex(item => item.id === task.id);
+    const openIndex = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item))).findIndex(item => item.id === task.id);
     moveButton.disabled = task.done || openIndex === 0;
     moveButton.addEventListener("click", () => moveTaskToTop(task.id));
 
@@ -1012,15 +1085,8 @@ function renderTasks() {
   removeOldDoneTasks();
   taskList.innerHTML = "";
   const rawItems = currentItems();
-  let items = rawItems;
   const shopping = isShoppingMode();
-  smallFilterButton.hidden = shopping;
-  smallFilterButton.classList.toggle("active", smallFilterActive);
-  if (shopping && smallFilterActive) smallFilterActive = false;
-
-  if (!shopping && smallFilterActive) {
-    items = rawItems.filter(item => item.done || item.effort === "small");
-  }
+  const items = shopping ? rawItems : rawItems.filter(isTaskVisibleNow);
 
   const emptyText = emptyState.querySelector("p");
   const messages = shopping ? emptyMessages.shopping : emptyMessages.tasks;
@@ -1031,10 +1097,7 @@ function renderTasks() {
 
   const openItems = items.filter(item => !item.done);
   const doneItems = items.filter(item => item.done);
-  emptyState.hidden = rawItems.length > 0 && (!smallFilterActive || openItems.length > 0 || doneItems.length > 0);
-  if (!shopping && smallFilterActive && openItems.length === 0 && doneItems.length === 0) {
-    emptyText.innerHTML = "<mark>אין קטנות כרגע.</mark><br />רק מפלצות, כנראה.";
-  }
+  emptyState.hidden = openItems.length > 0 || doneItems.length > 0;
 
   openItems.forEach(task => taskList.appendChild(createTaskRow(task)));
 
@@ -1143,8 +1206,7 @@ function switchList(nextList) {
   shoppingTab.setAttribute("aria-selected", String(shopping));
   addTaskButton.querySelector("strong").textContent = shopping ? "צריך לקנות" : "עוד מטלה";
   recurringButton.hidden = shopping;
-  smallFilterButton.hidden = shopping;
-  if (shopping) smallFilterActive = false;
+  futureButton.hidden = shopping;
   renderTasks();
 }
 
@@ -1156,12 +1218,9 @@ backupButton.addEventListener("click", openBackupDialog);
 closeBackupButton.addEventListener("click", closeBackupDialog);
 exportBackupButton.addEventListener("click", exportBackup);
 importBackupInput.addEventListener("change", event => importBackupFile(event.target.files?.[0]));
-smallFilterButton.addEventListener("click", () => {
-  smallFilterActive = !smallFilterActive;
-  renderTasks();
-});
-refreshButton.addEventListener("click", openRefreshDialog);
-closeRefreshButton.addEventListener("click", closeRefreshDialog);
+futureButton.addEventListener("click", openFutureDialog);
+closeFutureButton.addEventListener("click", closeFutureDialog);
+taskForm.querySelectorAll('input[name="scheduleMode"]').forEach(input => input.addEventListener("change", updateScheduleVisibility));
 closeDialogButton.addEventListener("click", closeTaskDialog);
 taskInput.addEventListener("input", () => { updateCharCount(); });
 
@@ -1170,8 +1229,14 @@ taskForm.addEventListener("submit", event => {
   const text = taskInput.value.trim();
   if (!text) return;
 
+  const schedule = isShoppingMode() ? null : getSelectedSchedule();
+  if (schedule && schedule.mode !== "now" && !schedule.date) {
+    scheduleDate.focus();
+    return;
+  }
+
   if (editingTaskId) {
-    updateTask(editingTaskId, text, isShoppingMode() ? null : getSelectedEffort());
+    updateTask(editingTaskId, text, isShoppingMode() ? null : getSelectedEffort(), schedule);
     closeTaskDialog();
     return;
   }
@@ -1179,7 +1244,7 @@ taskForm.addEventListener("submit", event => {
   if (isShoppingMode()) {
     createShoppingItemsFromText(text);
   } else {
-    createTask(text, null, getSelectedEffort());
+    createTask(text, null, getSelectedEffort(), schedule);
   }
 
   if (isShoppingMode()) {
@@ -1242,7 +1307,7 @@ window.addEventListener("keydown", event => {
     if (recurringFormDialog.open) closeRecurringForm();
     if (deleteRecurringDialog.open) closeDeleteRecurringDialog();
     if (backupDialog.open) closeBackupDialog();
-    if (refreshDialog.open) closeRefreshDialog();
+    if (futureDialog.open) closeFutureDialog();
   }
 });
 

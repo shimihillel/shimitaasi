@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v19-smart-notebook -->
+  <!-- app-version: v20-future -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=19" />
+  <link rel="stylesheet" href="style.css?v=20" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -30,12 +30,11 @@
           <button id="tasksTab" class="tab-button active" type="button" role="tab" aria-selected="true">לעשות</button>
           <button id="shoppingTab" class="tab-button" type="button" role="tab" aria-selected="false">לקנות</button>
         </div>
-        <div class="header-actions">
+        <div class="header-actions refreshed-panel">
           <button id="recurringButton" class="sort-toggle mini" type="button">קבועות</button>
-          <button id="backupButton" class="sort-toggle mini" type="button">גיבוי</button>
-          <button id="smallFilterButton" class="sort-toggle mini" type="button" hidden>קטנות</button>
-          <button id="refreshButton" class="sort-toggle mini" type="button">רענון</button>
+          <button id="futureButton" class="sort-toggle mini" type="button">עתידיות</button>
           <button id="sortModeButton" class="sort-toggle mini" type="button" aria-pressed="false">סדרי לי</button>
+          <button id="backupButton" class="sort-toggle mini" type="button">גיבוי</button>
         </div>
         <p id="sortHint" class="sort-hint" hidden>מצב סידור פעיל · לראש, למעלה, למטה או לסוף</p>
       </header>
@@ -69,6 +68,24 @@
           <label><input type="radio" name="effort" value="normal" checked /> רגילה</label>
           <label><input type="radio" name="effort" value="small" /> קטנה</label>
           <label><input type="radio" name="effort" value="heavy" /> כבדה</label>
+        </div>
+      </div>
+
+      <div id="scheduleField" class="schedule-field">
+        <p class="field-label">מתי להציג?</p>
+        <div class="schedule-mode-options" role="radiogroup" aria-label="מועד הצגת המטלה">
+          <label><input type="radio" name="scheduleMode" value="now" checked /> עכשיו</label>
+          <label><input type="radio" name="scheduleMode" value="exact" /> בתאריך מסוים</label>
+          <label><input type="radio" name="scheduleMode" value="from" /> החל מתאריך</label>
+        </div>
+        <div id="scheduleDateWrap" class="schedule-date-wrap" hidden>
+          <label class="field-label" for="scheduleDate">תאריך</label>
+          <input id="scheduleDate" class="schedule-date-input" type="date" />
+        </div>
+        <div id="scheduleTimeWrap" class="schedule-time-wrap" hidden>
+          <label class="field-label" for="scheduleTime">שעה <span class="optional-note">(לא חובה)</span></label>
+          <input id="scheduleTime" class="schedule-time-input" type="time" />
+          <p class="hint schedule-hint">השעה תוצג כחלק מהמטלה בלבד. בלי התראות ובלי דרמה.</p>
         </div>
       </div>
       <p class="hint"><span id="charCount">0</span>/900</p>
@@ -169,15 +186,15 @@
     </div>
   </dialog>
 
-  <dialog id="refreshDialog" class="dialog refresh-dialog">
-    <div class="dialog-card refresh-card">
-      <button class="icon-close" id="closeRefreshButton" type="button" aria-label="סגירה">×</button>
-      <h2><mark>רענון מחברת</mark></h2>
-      <p class="backup-copy">דברים ישנים/כבויים שאולי שווה לנקות, להשאיר או לדחוף לסוף.</p>
-      <div id="refreshList" class="refresh-list"></div>
+  <dialog id="futureDialog" class="dialog future-dialog">
+    <div class="dialog-card future-card">
+      <button class="icon-close" id="closeFutureButton" type="button" aria-label="סגירה">×</button>
+      <h2><mark>עתידיות</mark></h2>
+      <p class="backup-copy">דברים שכבר כתבת, אבל ביקשת שלא יציקו לפני הזמן.</p>
+      <div id="futureList" class="future-list"></div>
     </div>
   </dialog>
 
-  <script src="app.js?v=19"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>
