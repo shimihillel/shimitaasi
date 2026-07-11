@@ -1300,11 +1300,19 @@ body.shopping-mode #taskDialog .effort-field {
 .schedule-time-wrap {
   display: grid;
   gap: 5px;
+  min-width: 0;
 }
 
 .schedule-date-input,
 .schedule-time-input {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  inline-size: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
   min-height: 46px;
   border: 1.7px solid var(--ink);
   border-radius: 13px;
