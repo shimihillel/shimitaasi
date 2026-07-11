@@ -1242,6 +1242,13 @@ body.shopping-mode #taskDialog .effort-field {
   transform: translate(-50%, 0) rotate(-1deg);
 }
 
+
+/* v20.2 · keep future date/time fields fully collapsed until selected */
+.schedule-date-wrap[hidden],
+.schedule-time-wrap[hidden] {
+  display: none !important;
+}
+
 /* v20 · future tasks + refreshed header panel */
 .header-actions.refreshed-panel {
   display: grid;
