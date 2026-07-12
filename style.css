@@ -1112,7 +1112,6 @@ body.shopping-mode #taskDialog .effort-field {
 }
 
 .suggestion-chip,
-.category-chip,
 .tiny-action {
   border: 1.5px solid var(--ink);
   background: rgba(255, 255, 255, .82);
@@ -1132,14 +1131,6 @@ body.shopping-mode #taskDialog .effort-field {
   cursor: pointer;
 }
 
-.category-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 20px;
-  padding: 1px 7px;
-  font-size: 11px;
-  background: rgba(235, 246, 231, .9);
-}
 
 .sort-toggle.mini.active {
   background: #fff0a8;
@@ -1374,4 +1365,15 @@ body.shopping-mode #taskDialog .effort-field {
   .schedule-mode-options label { justify-content: flex-start; padding-inline: 12px; }
   .future-row { grid-template-columns: 1fr; }
   .future-actions { max-width: none; justify-content: flex-start; }
+}
+
+/* v20.3 · shopping list never shows scheduling controls */
+.schedule-field[hidden] {
+  display: none !important;
+}
+
+body.shopping-mode .schedule-field,
+body.shopping-mode .schedule-date-wrap,
+body.shopping-mode .schedule-time-wrap {
+  display: none !important;
 }

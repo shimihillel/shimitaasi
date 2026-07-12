@@ -550,19 +550,6 @@ function getHeadTask() {
   return tasks.find(task => task.onHead && !task.done && isTaskVisibleNow(task));
 }
 
-function shoppingCategory(text) {
-  const value = (text || "").toLowerCase();
-  const groups = [
-    { label: "מקרר", words: ["חלב", "גבינה", "יוגורט", "קוטג", "ביצים", "חמאה", "שמנת"] },
-    { label: "בית", words: ["מגבונים", "נייר", "סבון", "שקיות", "טישו", "אקונומיקה", "כביסה", "מרכך"] },
-    { label: "חתולים", words: ["חתול", "חתולים", "סושי", "מייפל", "חול", "אוכל לחתולים"] },
-    { label: "טיפוח", words: ["קרם", "שמפו", "מסכה", "סרום", "סבון פנים", "דאודורנט", "לק"] },
-    { label: "ילדים", words: ["שחר", "רון", "ניר", "גן", "בית ספר", "מחברת", "טושים"] }
-  ];
-  const found = groups.find(group => group.words.some(word => value.includes(word)));
-  return found ? found.label : "כללי";
-}
-
 function registerAchievement(item) {
   const today = todayKey();
   let data;
@@ -959,12 +946,6 @@ function createTaskRow(task) {
     metaWrap.appendChild(effortChip);
   }
 
-  if (isShoppingMode()) {
-    const categoryChip = document.createElement("span");
-    categoryChip.className = "category-chip";
-    categoryChip.textContent = shoppingCategory(task.text);
-    metaWrap.appendChild(categoryChip);
-  }
 
   textWrap.append(taskText, metaWrap);
 
