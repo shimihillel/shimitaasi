@@ -1457,3 +1457,20 @@ body.shopping-mode .schedule-time-wrap {
   .reveal-options { grid-template-columns: 1fr; }
   .reveal-options label { justify-content: flex-start; padding-inline: 12px; }
 }
+
+
+/* v21.1 · most important shopping item */
+body.shopping-mode .task-row.shopping-priority {
+  background: rgba(255, 239, 166, .72);
+  box-shadow: inset 0 0 0 1.5px rgba(84, 68, 24, .18), 0 3px 0 rgba(35, 29, 16, .08);
+}
+body.shopping-mode .task-row.shopping-priority .task-text::before {
+  content: "הכי חשוב · ";
+  font-size: 11px;
+  font-weight: 950;
+  color: #8a6711;
+}
+body.shopping-mode .action-button.head.active {
+  background: rgba(255, 222, 94, .96);
+  transform: rotate(-4deg);
+}

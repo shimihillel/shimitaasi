@@ -400,7 +400,10 @@ function moveTaskBy(id, direction) {
 
 function getVisibleTasks() {
   const items = currentItems();
-  const openItems = items.filter(item => !item.done);
+  let openItems = items.filter(item => !item.done);
+  if (shopping) {
+    openItems = [...openItems].sort((a, b) => Number(Boolean(b.onHead)) - Number(Boolean(a.onHead)));
+  }
   const doneItems = items.filter(item => item.done);
   return [...openItems, ...doneItems];
 }
@@ -578,6 +581,26 @@ function renderSuggestions() {
 }
 
 function setHeadTask(id) {
+  if (isShoppingMode()) {
+    const selected = shoppingItems.find(item => item.id === id);
+    const nextActive = selected ? !selected.onHead : false;
+    shoppingItems = shoppingItems.map(item => ({
+      ...item,
+      onHead: item.id === id ? nextActive : false
+    }));
+
+    if (nextActive) {
+      const important = shoppingItems.find(item => item.id === id);
+      const restOpen = shoppingItems.filter(item => !item.done && item.id !== id);
+      const done = shoppingItems.filter(item => item.done);
+      shoppingItems = [important, ...restOpen, ...done];
+    }
+
+    saveShoppingItems();
+    renderTasks();
+    return;
+  }
+
   tasks = tasks.map(task => ({ ...task, onHead: task.id === id ? !task.onHead : false }));
   saveTasks();
   renderTasks();
@@ -972,7 +995,7 @@ function closeDeleteRecurringDialog() {
 
 function createTaskRow(task) {
   const row = document.createElement("article");
-  row.className = `task-row${task.done ? " done" : ""}${task.specialType === "rosemary" ? " rosemary-task" : ""}`;
+  row.className = `task-row${task.done ? " done" : ""}${task.specialType === "rosemary" ? " rosemary-task" : ""}${isShoppingMode() && task.onHead && !task.done ? " shopping-priority" : ""}`;
 
   const checkButton = document.createElement("button");
   checkButton.className = "check-button";
@@ -1066,9 +1089,10 @@ function createTaskRow(task) {
     headButton.className = `action-button head ${task.onHead ? "active" : ""}`;
     headButton.type = "button";
     headButton.textContent = "!";
-    headButton.setAttribute("aria-label", task.onHead ? "להוריד מהראש" : "לשים על הראש");
-    headButton.title = task.onHead ? "להוריד מהראש" : "על הראש";
-    headButton.hidden = isShoppingMode() || task.done;
+    const priorityLabel = isShoppingMode() ? "הכי חשוב" : "על הראש";
+    headButton.setAttribute("aria-label", task.onHead ? `לבטל ${priorityLabel}` : `לסמן ${priorityLabel}`);
+    headButton.title = task.onHead ? `לבטל ${priorityLabel}` : priorityLabel;
+    headButton.hidden = task.done;
     headButton.addEventListener("click", () => setHeadTask(task.id));
 
     const moveButton = document.createElement("button");
@@ -1141,7 +1165,10 @@ function renderTasks() {
 
   renderHeadNote();
 
-  const openItems = items.filter(item => !item.done);
+  let openItems = items.filter(item => !item.done);
+  if (shopping) {
+    openItems = [...openItems].sort((a, b) => Number(Boolean(b.onHead)) - Number(Boolean(a.onHead)));
+  }
   const doneItems = items.filter(item => item.done);
   emptyState.hidden = openItems.length > 0 || doneItems.length > 0;
 
