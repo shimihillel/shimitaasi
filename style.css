@@ -170,10 +170,10 @@ button { -webkit-tap-highlight-color: transparent; }
   display: grid;
   grid-template-columns: var(--tap) minmax(0, 1fr) auto;
   gap: 4px;
-  align-items: center;
+  align-items: start;
   min-height: 54px;
-  max-height: 82px;
-  padding: 2px 0;
+  max-height: none;
+  padding: 4px 0;
   border-bottom: 1px solid rgba(78, 134, 157, 0.14);
 }
 
@@ -897,8 +897,10 @@ body[data-theme="green"] {
   display: flex;
   align-items: center;
   gap: 7px;
+  row-gap: 5px;
   flex-wrap: wrap;
-  margin-top: 2px;
+  margin-top: 3px;
+  min-width: 0;
 }
 
 .task-meta .task-date { margin-top: 0; }
@@ -1475,8 +1477,21 @@ body.shopping-mode .action-button.head.active {
   transform: rotate(-4deg);
 }
 
-/* v21.2 · persistent task pinned to top */
-.task-row.task-priority {
-  background: rgba(255, 240, 168, .48);
-  box-shadow: inset 4px 0 0 rgba(226, 179, 52, .7);
+/* v21.3 · "על הראש" is shown only in the separate top note; original task stays unstyled and in place. */
+
+/* v21.4 · spacing fix for countdown chips */
+.task-row.has-countdown {
+  padding-block: 6px;
+}
+
+.task-row.has-countdown .task-text-wrap {
+  padding-block: 5px;
+}
+
+.task-row.has-countdown .task-meta {
+  margin-top: 5px;
+}
+
+.task-row.has-countdown .countdown-chip {
+  flex-shrink: 0;
 }

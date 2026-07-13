@@ -401,7 +401,9 @@ function moveTaskBy(id, direction) {
 function getVisibleTasks() {
   const items = currentItems();
   let openItems = items.filter(item => !item.done);
-  openItems = [...openItems].sort((a, b) => Number(Boolean(b.onHead)) - Number(Boolean(a.onHead)));
+  if (isShoppingMode()) {
+    openItems = [...openItems].sort((a, b) => Number(Boolean(b.onHead)) - Number(Boolean(a.onHead)));
+  }
   const doneItems = items.filter(item => item.done);
   return [...openItems, ...doneItems];
 }
@@ -606,13 +608,8 @@ function setHeadTask(id) {
     onHead: task.id === id ? nextActive : false
   }));
 
-  if (nextActive) {
-    const headTask = tasks.find(task => task.id === id);
-    const otherOpen = tasks.filter(task => !task.done && task.id !== id);
-    const done = tasks.filter(task => task.done);
-    tasks = [headTask, ...otherOpen, ...done];
-  }
-
+  // In the tasks tab, "על הראש" is only a separate note at the top.
+  // The original task keeps its exact position in the list.
   saveTasks();
   renderTasks();
 }
@@ -1006,7 +1003,7 @@ function closeDeleteRecurringDialog() {
 
 function createTaskRow(task) {
   const row = document.createElement("article");
-  row.className = `task-row${task.done ? " done" : ""}${task.specialType === "rosemary" ? " rosemary-task" : ""}${task.onHead && !task.done ? (isShoppingMode() ? " shopping-priority" : " task-priority") : ""}`;
+  row.className = `task-row${task.done ? " done" : ""}${task.specialType === "rosemary" ? " rosemary-task" : ""}${task.onHead && !task.done && isShoppingMode() ? " shopping-priority" : ""}`;
 
   const checkButton = document.createElement("button");
   checkButton.className = "check-button";
@@ -1034,6 +1031,7 @@ function createTaskRow(task) {
   metaWrap.appendChild(taskDate);
   const countdownLabel = getCountdownLabel(task);
   if (countdownLabel) {
+    row.classList.add("has-countdown");
     const countdownChip = document.createElement("span");
     countdownChip.className = "countdown-chip";
     countdownChip.textContent = countdownLabel;
@@ -1177,7 +1175,9 @@ function renderTasks() {
   renderHeadNote();
 
   let openItems = items.filter(item => !item.done);
-  openItems = [...openItems].sort((a, b) => Number(Boolean(b.onHead)) - Number(Boolean(a.onHead)));
+  if (shopping) {
+    openItems = [...openItems].sort((a, b) => Number(Boolean(b.onHead)) - Number(Boolean(a.onHead)));
+  }
   const doneItems = items.filter(item => item.done);
   emptyState.hidden = openItems.length > 0 || doneItems.length > 0;
 
