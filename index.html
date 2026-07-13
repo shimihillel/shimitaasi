@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v20.4-shopping-clean -->
+  <!-- app-version: v21-hairwash-countdown -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=20.4" />
+  <link rel="stylesheet" href="style.css?v=21" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -62,14 +62,6 @@
       <label class="sr-only" for="taskInput">טקסט המטלה</label>
       <textarea id="taskInput" rows="3" maxlength="900" placeholder="כתוב פה..." required></textarea>
       <div id="suggestionsBox" class="suggestions-box" hidden></div>
-      <div id="effortField" class="effort-field">
-        <p class="field-label">כמה זה מרגיש?</p>
-        <div class="effort-options" role="radiogroup" aria-label="סוג מטלה">
-          <label><input type="radio" name="effort" value="normal" checked /> רגילה</label>
-          <label><input type="radio" name="effort" value="small" /> קטנה</label>
-          <label><input type="radio" name="effort" value="heavy" /> כבדה</label>
-        </div>
-      </div>
 
       <div id="scheduleField" class="schedule-field">
         <p class="field-label">מתי להציג?</p>
@@ -86,6 +78,14 @@
           <label class="field-label" for="scheduleTime">שעה <span class="optional-note">(לא חובה)</span></label>
           <input id="scheduleTime" class="schedule-time-input" type="time" />
           <p class="hint schedule-hint">השעה תוצג כחלק מהמטלה בלבד. בלי התראות ובלי דרמה.</p>
+        </div>
+        <div id="scheduleRevealWrap" class="schedule-reveal-wrap" hidden>
+          <p class="field-label">מתי להתחיל להציג?</p>
+          <div class="reveal-options" role="radiogroup" aria-label="מועד תחילת הצגת המטלה">
+            <label><input type="radio" name="scheduleReveal" value="3" /> 3 ימים לפני</label>
+            <label><input type="radio" name="scheduleReveal" value="1" /> יום לפני</label>
+            <label><input type="radio" name="scheduleReveal" value="0" checked /> ביום עצמו בלבד</label>
+          </div>
         </div>
       </div>
       <p class="hint"><span id="charCount">0</span>/900</p>
@@ -195,6 +195,19 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20.4"></script>
+  <dialog id="hairWashDialog" class="dialog small-dialog hair-wash-dialog">
+    <div class="dialog-card confirm-card hair-wash-card">
+      <span class="hair-wash-doodle" aria-hidden="true">❧</span>
+      <h2><mark>היום יום חפיפה?</mark></h2>
+      <p class="backup-copy">רק כדי שרוזמרין לא תברח לך מהראש.</p>
+      <div class="hair-wash-actions">
+        <button id="hairWashYes" class="save-button" type="button">כן</button>
+        <button id="hairWashNo" class="secondary-button" type="button">לא</button>
+        <button id="hairWashLater" class="secondary-button later-button" type="button">תשאלי אותי מאוחר יותר</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js?v=21"></script>
 </body>
 </html>

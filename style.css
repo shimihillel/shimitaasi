@@ -1377,3 +1377,83 @@ body.shopping-mode .schedule-date-wrap,
 body.shopping-mode .schedule-time-wrap {
   display: none !important;
 }
+
+
+/* v21 · future reveal countdown + hair-wash morning prompt */
+.schedule-reveal-wrap {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.schedule-reveal-wrap[hidden] { display: none !important; }
+.reveal-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.reveal-options label {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 7px;
+  border: 1.5px solid rgba(23, 21, 19, .46);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .58);
+  font-size: 12px;
+  font-weight: 850;
+  text-align: center;
+  cursor: pointer;
+}
+.reveal-options input { accent-color: #1d1a17; }
+.reveal-options label:has(input:checked) {
+  background: #fff0a8;
+  box-shadow: 0 3px 0 rgba(23, 21, 19, .18);
+  transform: translateY(-1px);
+}
+.countdown-chip,
+.rosemary-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1.3px solid rgba(23,21,19,.55);
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+}
+.countdown-chip { background: #fff0a8; }
+.rosemary-chip { background: #dcefcf; }
+.task-row.rosemary-task {
+  background: linear-gradient(90deg, rgba(220,239,207,.88), rgba(255,255,255,.5));
+  border-radius: 15px;
+  box-shadow: inset 4px 0 0 #7aa66a;
+}
+.task-row.rosemary-task .task-text { font-weight: 950; }
+.hair-wash-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, #fff9e7, #e8f3dc);
+}
+.hair-wash-doodle {
+  position: absolute;
+  inset-inline-end: 18px;
+  top: 10px;
+  font-size: 34px;
+  transform: rotate(-13deg);
+  opacity: .52;
+}
+.hair-wash-actions {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+}
+.hair-wash-actions .save-button,
+.hair-wash-actions .secondary-button { width: 100%; }
+.hair-wash-actions .later-button { background: rgba(255,255,255,.72); }
+@media (max-width: 420px) {
+  .reveal-options { grid-template-columns: 1fr; }
+  .reveal-options label { justify-content: flex-start; padding-inline: 12px; }
+}

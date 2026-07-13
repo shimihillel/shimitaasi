@@ -3,6 +3,7 @@ const SHOPPING_STORAGE_KEY = "shimi-taasi-shopping-v1";
 const RECURRING_STORAGE_KEY = "shimi-taasi-recurring-v1";
 const SUGGESTIONS_STORAGE_KEY = "shimi-taasi-suggestions-v1";
 const ACHIEVEMENT_STORAGE_KEY = "shimi-taasi-achievement-v1";
+const HAIR_WASH_PROMPT_KEY = "shimi-taasi-hair-wash-prompt-v1";
 
 const taskList = document.getElementById("taskList");
 const emptyState = document.getElementById("emptyState");
@@ -43,7 +44,11 @@ const scheduleDate = document.getElementById("scheduleDate");
 const scheduleTime = document.getElementById("scheduleTime");
 const suggestionsBox = document.getElementById("suggestionsBox");
 const headNote = document.getElementById("headNote");
-const effortField = document.getElementById("effortField");
+const scheduleRevealWrap = document.getElementById("scheduleRevealWrap");
+const hairWashDialog = document.getElementById("hairWashDialog");
+const hairWashYes = document.getElementById("hairWashYes");
+const hairWashNo = document.getElementById("hairWashNo");
+const hairWashLater = document.getElementById("hairWashLater");
 
 const recurringButton = document.getElementById("recurringButton");
 const recurringDialog = document.getElementById("recurringDialog");
@@ -133,12 +138,35 @@ function daysBetweenKeys(fromKey, toKey) {
   return Math.floor((toDate - fromDate) / 86400000);
 }
 
+function getTaskRevealDate(task) {
+  if (!task || !task.scheduleDate || !task.scheduleMode || task.scheduleMode === "now") return null;
+  if (task.scheduleMode === "from") return task.scheduleDate;
+  const eventDate = dateFromKey(task.scheduleDate);
+  if (!eventDate) return task.scheduleDate;
+  const leadDays = Math.max(0, Math.min(3, Number(task.scheduleRevealDays) || 0));
+  eventDate.setDate(eventDate.getDate() - leadDays);
+  const year = eventDate.getFullYear();
+  const month = String(eventDate.getMonth() + 1).padStart(2, "0");
+  const day = String(eventDate.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function isFutureTask(task) {
-  return Boolean(task && task.scheduleMode && task.scheduleMode !== "now" && task.scheduleDate && task.scheduleDate > todayKey());
+  const revealDate = getTaskRevealDate(task);
+  return Boolean(revealDate && revealDate > todayKey());
 }
 
 function isTaskVisibleNow(task) {
   return !isFutureTask(task);
+}
+
+function getCountdownLabel(task) {
+  if (!task || task.scheduleMode !== "exact" || !task.scheduleDate || !isTaskVisibleNow(task)) return "";
+  const days = daysBetweenKeys(todayKey(), task.scheduleDate);
+  if (days === 3) return "עוד 3 ימים";
+  if (days === 2) return "עוד יומיים";
+  if (days === 1) return "מחר";
+  return "";
 }
 
 function formatCalendarDate(dateKey, includeWeekday = true) {
@@ -245,19 +273,20 @@ function removeOldDoneTasks() {
   shoppingItems = shoppingItems.filter(item => !item.done || item.doneAt === today);
 }
 
-function createTask(text, recurringId = null, effort = "normal", schedule = null) {
+function createTask(text, recurringId = null, schedule = null, extra = {}) {
   const newItem = {
     id: `item-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     text: text.trim(),
     createdAt: todayKey(),
     done: false,
     doneAt: null,
-    effort: isShoppingMode() ? "normal" : effort,
     recurringId: isShoppingMode() ? null : recurringId,
     onHead: false,
     scheduleMode: isShoppingMode() ? "now" : (schedule?.mode || "now"),
     scheduleDate: isShoppingMode() ? null : (schedule?.date || null),
-    scheduleTime: isShoppingMode() ? null : (schedule?.mode === "exact" ? (schedule?.time || null) : null)
+    scheduleTime: isShoppingMode() ? null : (schedule?.mode === "exact" ? (schedule?.time || null) : null),
+    scheduleRevealDays: isShoppingMode() ? 0 : (schedule?.mode === "exact" ? Number(schedule?.revealDays || 0) : 0),
+    specialType: extra.specialType || null
   };
 
   if (isShoppingMode()) {
@@ -271,8 +300,17 @@ function createTask(text, recurringId = null, effort = "normal", schedule = null
   renderTasks();
 }
 
-function updateTask(id, text, effort = null, schedule = null) {
-  const items = currentItems().map(item => item.id === id ? { ...item, text: text.trim(), ...(effort ? { effort } : {}), ...(schedule ? { scheduleMode: schedule.mode, scheduleDate: schedule.date || null, scheduleTime: schedule.mode === "exact" ? (schedule.time || null) : null } : {}) } : item);
+function updateTask(id, text, schedule = null) {
+  const items = currentItems().map(item => item.id === id ? {
+    ...item,
+    text: text.trim(),
+    ...(schedule ? {
+      scheduleMode: schedule.mode,
+      scheduleDate: schedule.date || null,
+      scheduleTime: schedule.mode === "exact" ? (schedule.time || null) : null,
+      scheduleRevealDays: schedule.mode === "exact" ? Number(schedule.revealDays || 0) : 0
+    } : {})
+  } : item);
   setCurrentItems(items);
   renderTasks();
 }
@@ -405,7 +443,6 @@ function generateDueRecurringTasks() {
       createdAt: today,
       done: false,
       doneAt: null,
-      effort: recurring.effort || "normal",
       recurringId: recurring.id,
       onHead: false,
       scheduleMode: "now",
@@ -554,13 +591,10 @@ function registerAchievement(item) {
   const today = todayKey();
   let data;
   try { data = JSON.parse(localStorage.getItem(ACHIEVEMENT_STORAGE_KEY)) || {}; } catch { data = {}; }
-  if (data.date !== today) data = { date: today, count: 0, threeShown: false, heavyShown: false };
+  if (data.date !== today) data = { date: today, count: 0, threeShown: false };
   data.count += 1;
 
-  if (!isShoppingMode() && item.effort === "heavy" && !data.heavyShown) {
-    data.heavyShown = true;
-    showToast("כבדה נפלה. כבוד.");
-  } else if (data.count === 3 && !data.threeShown) {
+  if (data.count === 3 && !data.threeShown) {
     data.threeShown = true;
     showToast("שלוש נסגרו. תראי אותך.");
   }
@@ -577,6 +611,40 @@ function showToast(message) {
     toast.classList.remove("show");
     setTimeout(() => toast.remove(), 300);
   }, 2600);
+}
+
+function getHairWashPromptState() {
+  try { return JSON.parse(localStorage.getItem(HAIR_WASH_PROMPT_KEY)) || null; } catch { return null; }
+}
+
+function setHairWashAnswer(answer) {
+  localStorage.setItem(HAIR_WASH_PROMPT_KEY, JSON.stringify({ date: todayKey(), answer }));
+}
+
+function hasRosemaryTaskToday() {
+  const today = todayKey();
+  return tasks.some(task => task.specialType === "rosemary" && task.createdAt === today);
+}
+
+function addRosemaryTask() {
+  if (hasRosemaryTaskToday()) return;
+  const previousList = activeList;
+  activeList = "tasks";
+  createTask("רוזמרין", null, { mode: "now", date: null, time: null, revealDays: 0 }, { specialType: "rosemary" });
+  activeList = previousList;
+  renderTasks();
+}
+
+function maybeOpenHairWashDialog() {
+  const state = getHairWashPromptState();
+  if (state?.date === todayKey() && (state.answer === "yes" || state.answer === "no")) return;
+  setTimeout(() => {
+    if (!hairWashDialog.open) hairWashDialog.showModal();
+  }, 180);
+}
+
+function closeHairWashDialog() {
+  if (hairWashDialog.open) hairWashDialog.close();
 }
 
 function openFutureDialog() {
@@ -635,7 +703,7 @@ function createFutureRow(task) {
   strong.textContent = task.text;
   const meta = document.createElement("span");
   meta.textContent = task.scheduleMode === "exact"
-    ? `${formatCalendarDate(task.scheduleDate)}${task.scheduleTime ? ` · ${task.scheduleTime}` : ""}`
+    ? `${formatCalendarDate(task.scheduleDate)}${task.scheduleTime ? ` · ${task.scheduleTime}` : ""} · ${Number(task.scheduleRevealDays || 0) === 3 ? "מוצגת 3 ימים לפני" : Number(task.scheduleRevealDays || 0) === 1 ? "מוצגת יום לפני" : "מוצגת ביום עצמו"}`
     : `החל מ־${formatCalendarDate(task.scheduleDate)}`;
   text.append(strong, meta);
 
@@ -647,7 +715,7 @@ function createFutureRow(task) {
   showNow.className = "tiny-action";
   showNow.textContent = "להציג עכשיו";
   showNow.addEventListener("click", () => {
-    tasks = tasks.map(item => item.id === task.id ? { ...item, scheduleMode: "now", scheduleDate: null, scheduleTime: null } : item);
+    tasks = tasks.map(item => item.id === task.id ? { ...item, scheduleMode: "now", scheduleDate: null, scheduleTime: null, scheduleRevealDays: 0 } : item);
     saveTasks();
     renderFutureList();
     renderTasks();
@@ -750,25 +818,15 @@ function importBackupFile(file) {
   reader.readAsText(file);
 }
 
-function getSelectedEffort() {
-  const checked = taskForm.querySelector('input[name="effort"]:checked');
-  return checked ? checked.value : "normal";
-}
-
-function setSelectedEffort(value) {
-  const next = value || "normal";
-  const input = taskForm.querySelector(`input[name="effort"][value="${next}"]`) || taskForm.querySelector('input[name="effort"][value="normal"]');
-  if (input) input.checked = true;
-}
-
 function getSelectedSchedule() {
   const selected = taskForm.querySelector('input[name="scheduleMode"]:checked');
   const mode = selected ? selected.value : "now";
-  if (mode === "now") return { mode: "now", date: null, time: null };
+  if (mode === "now") return { mode: "now", date: null, time: null, revealDays: 0 };
   return {
     mode,
     date: scheduleDate.value || null,
-    time: mode === "exact" ? (scheduleTime.value || null) : null
+    time: mode === "exact" ? (scheduleTime.value || null) : null,
+    revealDays: mode === "exact" ? Number(taskForm.querySelector('input[name="scheduleReveal"]:checked')?.value || 0) : 0
   };
 }
 
@@ -778,6 +836,9 @@ function setSelectedSchedule(task = null) {
   if (input) input.checked = true;
   scheduleDate.value = task?.scheduleDate || "";
   scheduleTime.value = task?.scheduleTime || "";
+  const revealValue = String(task?.scheduleRevealDays ?? 0);
+  const revealInput = taskForm.querySelector(`input[name="scheduleReveal"][value="${revealValue}"]`) || taskForm.querySelector('input[name="scheduleReveal"][value="0"]');
+  if (revealInput) revealInput.checked = true;
   updateScheduleVisibility();
 }
 
@@ -787,6 +848,7 @@ function updateScheduleVisibility() {
   const scheduled = !isShoppingMode() && mode !== "now";
   scheduleDateWrap.hidden = !scheduled;
   scheduleTimeWrap.hidden = !(!isShoppingMode() && mode === "exact");
+  scheduleRevealWrap.hidden = !(!isShoppingMode() && mode === "exact");
   scheduleDate.required = scheduled;
   if (mode !== "exact") scheduleTime.value = "";
 }
@@ -818,10 +880,8 @@ function openTaskDialog(mode, task = null) {
     dialogTitle.innerHTML = "<mark>מה נפל עלייך עכשיו?</mark>";
     taskForm.querySelector(".save-button").textContent = "שימי, תעשי";
   }
-  effortField.hidden = isShoppingMode();
   scheduleField.hidden = isShoppingMode();
   renderSuggestions();
-  setSelectedEffort(task?.effort || "normal");
   setSelectedSchedule(task);
   taskInput.placeholder = isShoppingMode() && mode !== "edit" ? "אפשר גם כמה שורות:\nחלב\nביצים\nמגבונים" : "כתוב פה...";
   taskInput.value = task?.text || "";
@@ -835,7 +895,6 @@ function closeTaskDialog() {
   taskDialog.close();
   editingTaskId = null;
   taskForm.reset();
-  setSelectedEffort("normal");
   setSelectedSchedule(null);
   updateCharCount();
   if (suggestionsBox) { suggestionsBox.hidden = true; suggestionsBox.innerHTML = ""; }
@@ -913,7 +972,7 @@ function closeDeleteRecurringDialog() {
 
 function createTaskRow(task) {
   const row = document.createElement("article");
-  row.className = `task-row${task.done ? " done" : ""}`;
+  row.className = `task-row${task.done ? " done" : ""}${task.specialType === "rosemary" ? " rosemary-task" : ""}`;
 
   const checkButton = document.createElement("button");
   checkButton.className = "check-button";
@@ -939,13 +998,19 @@ function createTaskRow(task) {
   const metaWrap = document.createElement("div");
   metaWrap.className = "task-meta";
   metaWrap.appendChild(taskDate);
-  if (!isShoppingMode() && task.effort && task.effort !== "normal") {
-    const effortChip = document.createElement("span");
-    effortChip.className = `effort-chip ${task.effort}`;
-    effortChip.textContent = task.effort === "heavy" ? "כבדה" : "קטנה";
-    metaWrap.appendChild(effortChip);
+  const countdownLabel = getCountdownLabel(task);
+  if (countdownLabel) {
+    const countdownChip = document.createElement("span");
+    countdownChip.className = "countdown-chip";
+    countdownChip.textContent = countdownLabel;
+    metaWrap.appendChild(countdownChip);
   }
-
+  if (!isShoppingMode() && task.specialType === "rosemary") {
+    const rosemaryChip = document.createElement("span");
+    rosemaryChip.className = "rosemary-chip";
+    rosemaryChip.textContent = "חפיפה";
+    metaWrap.appendChild(rosemaryChip);
+  }
 
   textWrap.append(taskText, metaWrap);
 
@@ -1217,7 +1282,7 @@ taskForm.addEventListener("submit", event => {
   }
 
   if (editingTaskId) {
-    updateTask(editingTaskId, text, isShoppingMode() ? null : getSelectedEffort(), schedule);
+    updateTask(editingTaskId, text, schedule);
     closeTaskDialog();
     return;
   }
@@ -1225,7 +1290,7 @@ taskForm.addEventListener("submit", event => {
   if (isShoppingMode()) {
     createShoppingItemsFromText(text);
   } else {
-    createTask(text, null, getSelectedEffort(), schedule);
+    createTask(text, null, schedule);
   }
 
   if (isShoppingMode()) {
@@ -1279,6 +1344,23 @@ confirmDeleteRecurringButton.addEventListener("click", () => {
   closeDeleteRecurringDialog();
 });
 
+hairWashYes.addEventListener("click", () => {
+  addRosemaryTask();
+  setHairWashAnswer("yes");
+  closeHairWashDialog();
+  if (activeList !== "tasks") switchList("tasks");
+});
+
+hairWashNo.addEventListener("click", () => {
+  setHairWashAnswer("no");
+  closeHairWashDialog();
+});
+
+hairWashLater.addEventListener("click", () => {
+  localStorage.removeItem(HAIR_WASH_PROMPT_KEY);
+  closeHairWashDialog();
+});
+
 window.addEventListener("keydown", event => {
   if (event.key === "Escape") {
     if (taskDialog.open) closeTaskDialog();
@@ -1289,8 +1371,10 @@ window.addEventListener("keydown", event => {
     if (deleteRecurringDialog.open) closeDeleteRecurringDialog();
     if (backupDialog.open) closeBackupDialog();
     if (futureDialog.open) closeFutureDialog();
+    if (hairWashDialog.open) closeHairWashDialog();
   }
 });
 
 loadTasks();
 switchList("tasks");
+maybeOpenHairWashDialog();
