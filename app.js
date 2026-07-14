@@ -63,6 +63,9 @@ const recurringFrequency = document.getElementById("recurringFrequency");
 const recurringWeekday = document.getElementById("recurringWeekday");
 const recurringMonthDay = document.getElementById("recurringMonthDay");
 const weeklyOptions = document.getElementById("weeklyOptions");
+const multiWeeklyOptions = document.getElementById("multiWeeklyOptions");
+const multiWeeklyError = document.getElementById("multiWeeklyError");
+const recurringWeekdayChecks = [...document.querySelectorAll('input[name="recurringWeekdays"]')];
 const monthlyOptions = document.getElementById("monthlyOptions");
 const closeRecurringFormButton = document.getElementById("closeRecurringFormButton");
 const deleteRecurringDialog = document.getElementById("deleteRecurringDialog");
@@ -414,6 +417,10 @@ function isRecurringDueToday(recurring) {
 
   if (recurring.frequency === "daily") return true;
   if (recurring.frequency === "weekly") return Number(recurring.weekday) === today.day;
+  if (recurring.frequency === "multiweekly") {
+    const days = Array.isArray(recurring.weekdays) ? recurring.weekdays.map(Number) : [];
+    return days.includes(today.day);
+  }
   if (recurring.frequency === "biweekly") {
     if (Number(recurring.weekday) !== today.day) return false;
     if (!recurring.lastGeneratedAt) return true;
@@ -465,6 +472,14 @@ function generateDueRecurringTasks() {
 function frequencyLabel(recurring) {
   if (recurring.frequency === "daily") return "כל יום";
   if (recurring.frequency === "weekly") return `כל ${weekdayLabels[Number(recurring.weekday)] || "שבוע"}`;
+  if (recurring.frequency === "multiweekly") {
+    const days = Array.isArray(recurring.weekdays) ? recurring.weekdays.map(Number).filter(day => day >= 0 && day <= 6) : [];
+    const names = days.map(day => weekdayLabels[day]);
+    if (names.length === 0) return "כמה פעמים בשבוע";
+    if (names.length === 1) return `כל ${names[0]}`;
+    if (names.length === 2) return `כל ${names[0]} ו${names[1]}`;
+    return `כל ${names.slice(0, -1).join(", ")} ו${names.at(-1)}`;
+  }
   if (recurring.frequency === "biweekly") return `פעם בשבועיים · ${weekdayLabels[Number(recurring.weekday)] || "יום קבוע"}`;
   if (recurring.frequency === "monthly") return `כל חודש ביום ${Number(recurring.monthDay) || 1}`;
   return "קבועה";
@@ -476,6 +491,7 @@ function createRecurringTask(data) {
     text: data.text.trim(),
     frequency: data.frequency,
     weekday: data.weekday,
+    weekdays: data.weekdays,
     monthDay: data.monthDay,
     enabled: true,
     createdAt: todayKey(),
@@ -493,6 +509,7 @@ function updateRecurringTask(id, data) {
     text: data.text.trim(),
     frequency: data.frequency,
     weekday: data.weekday,
+    weekdays: data.weekdays,
     monthDay: data.monthDay,
     lastGeneratedAt: null
   } : item);
@@ -965,8 +982,11 @@ function closeRecurringDialog() {
 }
 
 function updateRecurringScheduleVisibility() {
-  weeklyOptions.hidden = !["weekly", "biweekly"].includes(recurringFrequency.value);
-  monthlyOptions.hidden = recurringFrequency.value !== "monthly";
+  const frequency = recurringFrequency.value;
+  weeklyOptions.hidden = !["weekly", "biweekly"].includes(frequency);
+  multiWeeklyOptions.hidden = frequency !== "multiweekly";
+  monthlyOptions.hidden = frequency !== "monthly";
+  if (frequency !== "multiweekly") multiWeeklyError.hidden = true;
 }
 
 function openRecurringForm(mode, recurring = null) {
@@ -975,6 +995,9 @@ function openRecurringForm(mode, recurring = null) {
   recurringInput.value = recurring?.text || "";
   recurringFrequency.value = recurring?.frequency || "weekly";
   recurringWeekday.value = String(recurring?.weekday ?? getTodayParts().day);
+  const selectedDays = Array.isArray(recurring?.weekdays) ? recurring.weekdays.map(Number) : [];
+  recurringWeekdayChecks.forEach(input => { input.checked = selectedDays.includes(Number(input.value)); });
+  multiWeeklyError.hidden = true;
   recurringMonthDay.value = String(recurring?.monthDay ?? getTodayParts().date);
   updateRecurringScheduleVisibility();
   recurringFormDialog.showModal();
@@ -987,6 +1010,8 @@ function closeRecurringForm() {
   editingRecurringId = null;
   recurringFrequency.value = "weekly";
   recurringWeekday.value = String(getTodayParts().day);
+  recurringWeekdayChecks.forEach(input => { input.checked = false; });
+  multiWeeklyError.hidden = true;
   recurringMonthDay.value = String(getTodayParts().date);
   updateRecurringScheduleVisibility();
 }
@@ -1351,6 +1376,7 @@ closeRecurringButton.addEventListener("click", closeRecurringDialog);
 addRecurringButton.addEventListener("click", () => openRecurringForm("add"));
 closeRecurringFormButton.addEventListener("click", closeRecurringForm);
 recurringFrequency.addEventListener("change", updateRecurringScheduleVisibility);
+recurringWeekdayChecks.forEach(input => input.addEventListener("change", () => { if (recurringWeekdayChecks.some(day => day.checked)) multiWeeklyError.hidden = true; }));
 
 recurringForm.addEventListener("submit", event => {
   event.preventDefault();
@@ -1358,10 +1384,18 @@ recurringForm.addEventListener("submit", event => {
   if (!text) return;
 
   const monthDay = Math.max(1, Math.min(31, Number(recurringMonthDay.value) || 1));
+  const weekdays = recurringWeekdayChecks.filter(input => input.checked).map(input => Number(input.value));
+  if (recurringFrequency.value === "multiweekly" && weekdays.length === 0) {
+    multiWeeklyError.hidden = false;
+    multiWeeklyOptions.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    return;
+  }
+  multiWeeklyError.hidden = true;
   const data = {
     text,
     frequency: recurringFrequency.value,
     weekday: Number(recurringWeekday.value),
+    weekdays,
     monthDay
   };
 

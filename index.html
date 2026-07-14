@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=21.3" />
+  <link rel="stylesheet" href="style.css?v=22" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -133,6 +133,7 @@
       <select id="recurringFrequency" class="recurring-select">
         <option value="daily">כל יום</option>
         <option value="weekly">פעם בשבוע</option>
+        <option value="multiweekly">כמה פעמים בשבוע</option>
         <option value="biweekly">פעם בשבועיים</option>
         <option value="monthly">פעם בחודש</option>
       </select>
@@ -148,6 +149,20 @@
           <option value="5">שישי</option>
           <option value="6">שבת</option>
         </select>
+      </div>
+
+      <div id="multiWeeklyOptions" class="schedule-options" hidden>
+        <p class="field-label">באילו ימים?</p>
+        <div class="weekday-picker" role="group" aria-label="בחירת ימים בשבוע">
+          <label><input type="checkbox" name="recurringWeekdays" value="0" /><span>א׳</span></label>
+          <label><input type="checkbox" name="recurringWeekdays" value="1" /><span>ב׳</span></label>
+          <label><input type="checkbox" name="recurringWeekdays" value="2" /><span>ג׳</span></label>
+          <label><input type="checkbox" name="recurringWeekdays" value="3" /><span>ד׳</span></label>
+          <label><input type="checkbox" name="recurringWeekdays" value="4" /><span>ה׳</span></label>
+          <label><input type="checkbox" name="recurringWeekdays" value="5" /><span>ו׳</span></label>
+          <label><input type="checkbox" name="recurringWeekdays" value="6" /><span>ש׳</span></label>
+        </div>
+        <p id="multiWeeklyError" class="inline-error" hidden>צריך לבחור לפחות יום אחד.</p>
       </div>
 
       <div id="monthlyOptions" class="schedule-options" hidden>
@@ -208,6 +223,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=21.3"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>

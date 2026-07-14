@@ -294,6 +294,10 @@ button { -webkit-tap-highlight-color: transparent; }
   padding: 22px 20px;
 }
 
+.empty-state[hidden] {
+  display: none !important;
+}
+
 .empty-state p {
   margin: 0;
   font-size: 25px;
@@ -1494,4 +1498,48 @@ body.shopping-mode .action-button.head.active {
 
 .task-row.has-countdown .countdown-chip {
   flex-shrink: 0;
+}
+
+/* v22 · multi-day weekly recurring tasks */
+.weekday-picker {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.weekday-picker label {
+  min-width: 0;
+  cursor: pointer;
+}
+.weekday-picker input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.weekday-picker span {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1.7px solid rgba(23, 21, 19, .48);
+  border-radius: 13px;
+  background: rgba(255,255,255,.76);
+  font-size: 16px;
+  font-weight: 900;
+  box-shadow: 0 2px 0 rgba(23,21,19,.12);
+}
+.weekday-picker input:checked + span {
+  background: var(--yellow);
+  border-color: var(--ink);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 rgba(23,21,19,.18);
+}
+.inline-error {
+  margin: 8px 4px 0;
+  color: #9c2c3c;
+  font-size: 13px;
+  font-weight: 850;
+}
+.inline-error[hidden] { display: none !important; }
+@media (max-width: 380px) {
+  .weekday-picker { gap: 4px; }
+  .weekday-picker span { min-height: 38px; font-size: 14px; border-radius: 11px; }
 }
