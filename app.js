@@ -83,6 +83,7 @@ let editingRecurringId = null;
 let deletingRecurringId = null;
 let doneCollapsed = { tasks: false, shopping: false };
 let suggestionCounts = {};
+let expandedTaskId = null;
 
 const weekdayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
@@ -1045,7 +1046,29 @@ function createTaskRow(task) {
   taskText.type = "button";
   taskText.textContent = task.text;
   taskText.setAttribute("aria-label", "פתיחת המטלה המלאה");
-  taskText.addEventListener("click", () => openViewTaskDialog(task));
+
+  const expandButton = document.createElement("button");
+  expandButton.className = "task-expand-button";
+  expandButton.type = "button";
+  expandButton.hidden = true;
+
+  const isExpanded = expandedTaskId === task.id;
+  if (isExpanded) row.classList.add("expanded");
+
+  const toggleExpanded = () => {
+    expandedTaskId = expandedTaskId === task.id ? null : task.id;
+    renderTasks();
+  };
+
+  taskText.addEventListener("click", () => {
+    if (row.classList.contains("is-truncated") || row.classList.contains("expanded")) {
+      toggleExpanded();
+    } else {
+      openViewTaskDialog(task);
+    }
+  });
+
+  expandButton.addEventListener("click", toggleExpanded);
 
   const taskDate = document.createElement("div");
   taskDate.className = "task-date";
@@ -1069,7 +1092,15 @@ function createTaskRow(task) {
     metaWrap.appendChild(rosemaryChip);
   }
 
-  textWrap.append(taskText, metaWrap);
+  textWrap.append(taskText, metaWrap, expandButton);
+
+  requestAnimationFrame(() => {
+    const isTruncated = taskText.scrollHeight > taskText.clientHeight + 1;
+    row.classList.toggle("is-truncated", isTruncated || isExpanded);
+    expandButton.hidden = !(isTruncated || isExpanded);
+    expandButton.textContent = isExpanded ? "פחות ⌃" : "עוד ⌄";
+    expandButton.setAttribute("aria-label", isExpanded ? "קיפול המטלה" : "הצגת כל המטלה");
+  });
 
   const actions = document.createElement("div");
   actions.className = "task-actions";
@@ -1300,6 +1331,7 @@ function renderRecurringTasks() {
 }
 
 function switchList(nextList) {
+  expandedTaskId = null;
   activeList = nextList;
   if (sortMode) setSortMode(false);
 
