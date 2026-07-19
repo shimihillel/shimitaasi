@@ -1047,6 +1047,18 @@ function createTaskRow(task) {
   taskText.setAttribute("aria-label", "פתיחת המטלה המלאה");
   taskText.addEventListener("click", () => openViewTaskDialog(task));
 
+  const longPreviewThreshold = 58;
+  const moreButton = task.text.trim().length > longPreviewThreshold
+    ? document.createElement("button")
+    : null;
+  if (moreButton) {
+    moreButton.className = "task-more-button";
+    moreButton.type = "button";
+    moreButton.textContent = "עוד…";
+    moreButton.setAttribute("aria-label", "הצגת המטלה המלאה");
+    moreButton.addEventListener("click", () => openViewTaskDialog(task));
+  }
+
   const taskDate = document.createElement("div");
   taskDate.className = "task-date";
   taskDate.textContent = formatTaskMeta(task);
@@ -1069,7 +1081,9 @@ function createTaskRow(task) {
     metaWrap.appendChild(rosemaryChip);
   }
 
-  textWrap.append(taskText, metaWrap);
+  textWrap.appendChild(taskText);
+  if (moreButton) textWrap.appendChild(moreButton);
+  textWrap.appendChild(metaWrap);
 
   const actions = document.createElement("div");
   actions.className = "task-actions";

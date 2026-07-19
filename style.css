@@ -1543,3 +1543,25 @@ body.shopping-mode .action-button.head.active {
   .weekday-picker { gap: 4px; }
   .weekday-picker span { min-height: 38px; font-size: 14px; border-radius: 11px; }
 }
+
+
+/* v23.4 · safe long-task indicator; full text opens in the existing view dialog */
+.task-more-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  margin-top: 3px;
+  padding: 2px 9px 3px;
+  border: 1.3px solid rgba(23, 21, 19, .35);
+  border-radius: 999px;
+  background: rgba(255, 240, 168, .72);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 900;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.task-more-button:active { transform: scale(.97); }
+.task-row.done .task-more-button { opacity: .62; }
