@@ -83,7 +83,6 @@ let editingRecurringId = null;
 let deletingRecurringId = null;
 let doneCollapsed = { tasks: false, shopping: false };
 let suggestionCounts = {};
-let expandedTaskId = null;
 
 const weekdayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
@@ -1045,21 +1044,8 @@ function createTaskRow(task) {
   taskText.className = "task-text";
   taskText.type = "button";
   taskText.textContent = task.text;
-
-  const isLongTask = String(task.text || "").length > 75;
-  const isExpanded = expandedTaskId === task.id;
-  if (isExpanded) row.classList.add("expanded");
-
-  const toggleExpanded = () => {
-    expandedTaskId = isExpanded ? null : task.id;
-    renderTasks();
-  };
-
-  taskText.setAttribute("aria-label", isLongTask ? (isExpanded ? "קיפול המטלה" : "הצגת כל המטלה") : "פתיחת המטלה המלאה");
-  taskText.addEventListener("click", () => {
-    if (isLongTask) toggleExpanded();
-    else openViewTaskDialog(task);
-  });
+  taskText.setAttribute("aria-label", "פתיחת המטלה המלאה");
+  taskText.addEventListener("click", () => openViewTaskDialog(task));
 
   const taskDate = document.createElement("div");
   taskDate.className = "task-date";
@@ -1084,15 +1070,6 @@ function createTaskRow(task) {
   }
 
   textWrap.append(taskText, metaWrap);
-  if (isLongTask) {
-    const expandButton = document.createElement("button");
-    expandButton.className = "task-expand-button";
-    expandButton.type = "button";
-    expandButton.textContent = isExpanded ? "פחות ⌃" : "עוד ⌄";
-    expandButton.setAttribute("aria-label", isExpanded ? "קיפול המטלה" : "הצגת כל המטלה");
-    expandButton.addEventListener("click", toggleExpanded);
-    textWrap.appendChild(expandButton);
-  }
 
   const actions = document.createElement("div");
   actions.className = "task-actions";
@@ -1323,7 +1300,6 @@ function renderRecurringTasks() {
 }
 
 function switchList(nextList) {
-  expandedTaskId = null;
   activeList = nextList;
   if (sortMode) setSortMode(false);
 
