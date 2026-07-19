@@ -1045,30 +1045,21 @@ function createTaskRow(task) {
   taskText.className = "task-text";
   taskText.type = "button";
   taskText.textContent = task.text;
-  taskText.setAttribute("aria-label", "פתיחת המטלה המלאה");
 
-  const expandButton = document.createElement("button");
-  expandButton.className = "task-expand-button";
-  expandButton.type = "button";
-  expandButton.hidden = true;
-
+  const isLongTask = String(task.text || "").length > 75;
   const isExpanded = expandedTaskId === task.id;
   if (isExpanded) row.classList.add("expanded");
 
   const toggleExpanded = () => {
-    expandedTaskId = expandedTaskId === task.id ? null : task.id;
+    expandedTaskId = isExpanded ? null : task.id;
     renderTasks();
   };
 
+  taskText.setAttribute("aria-label", isLongTask ? (isExpanded ? "קיפול המטלה" : "הצגת כל המטלה") : "פתיחת המטלה המלאה");
   taskText.addEventListener("click", () => {
-    if (row.classList.contains("is-truncated") || row.classList.contains("expanded")) {
-      toggleExpanded();
-    } else {
-      openViewTaskDialog(task);
-    }
+    if (isLongTask) toggleExpanded();
+    else openViewTaskDialog(task);
   });
-
-  expandButton.addEventListener("click", toggleExpanded);
 
   const taskDate = document.createElement("div");
   taskDate.className = "task-date";
@@ -1092,15 +1083,16 @@ function createTaskRow(task) {
     metaWrap.appendChild(rosemaryChip);
   }
 
-  textWrap.append(taskText, metaWrap, expandButton);
-
-  requestAnimationFrame(() => {
-    const isTruncated = taskText.scrollHeight > taskText.clientHeight + 1;
-    row.classList.toggle("is-truncated", isTruncated || isExpanded);
-    expandButton.hidden = !(isTruncated || isExpanded);
+  textWrap.append(taskText, metaWrap);
+  if (isLongTask) {
+    const expandButton = document.createElement("button");
+    expandButton.className = "task-expand-button";
+    expandButton.type = "button";
     expandButton.textContent = isExpanded ? "פחות ⌃" : "עוד ⌄";
     expandButton.setAttribute("aria-label", isExpanded ? "קיפול המטלה" : "הצגת כל המטלה");
-  });
+    expandButton.addEventListener("click", toggleExpanded);
+    textWrap.appendChild(expandButton);
+  }
 
   const actions = document.createElement("div");
   actions.className = "task-actions";
