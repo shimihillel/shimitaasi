@@ -1088,7 +1088,16 @@ function createTaskRow(task) {
   const actions = document.createElement("div");
   actions.className = "task-actions";
 
-  if (sortMode) {
+  if (task.done) {
+    const undoButton = document.createElement("button");
+    undoButton.className = "undo-done-button";
+    undoButton.type = "button";
+    undoButton.textContent = "↩ החזרי";
+    undoButton.setAttribute("aria-label", isShoppingMode() ? "להחזיר פריט לרשימת הקניות" : "להחזיר מטלה לרשימה הפתוחה");
+    undoButton.title = isShoppingMode() ? "להחזיר לקניות" : "להחזיר לפתוחות";
+    undoButton.addEventListener("click", () => toggleDone(task.id));
+    actions.appendChild(undoButton);
+  } else if (sortMode) {
     row.classList.add("sorting");
 
     const openItems = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item)));

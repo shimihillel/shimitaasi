@@ -1565,3 +1565,24 @@ body.shopping-mode .action-button.head.active {
 }
 .task-more-button:active { transform: scale(.97); }
 .task-row.done .task-more-button { opacity: .62; }
+
+
+/* v23.5 · explicit undo for completed items */
+.undo-done-button {
+  min-width: 88px;
+  min-height: 40px;
+  padding: 7px 11px;
+  border: 1.6px solid rgba(23, 21, 19, .58);
+  border-radius: 999px;
+  background: #fff0a8;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(23, 21, 19, .15);
+  white-space: nowrap;
+}
+.undo-done-button:active { transform: translateY(1px); box-shadow: none; }
+.done-list .task-actions { padding-inline-start: 2px; }
