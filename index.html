@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v21.3-head-note-only -->
+  <!-- app-version: v23.7-actions-popup-edit -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=23.6" />
+  <link rel="stylesheet" href="style.css?v=23.7" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -107,8 +107,8 @@
     <form method="dialog" class="dialog-card view-card">
       <button class="icon-close" id="closeViewDialogButton" type="button" aria-label="סגירה">×</button>
       <h2><mark>הפתק המלא</mark></h2>
-      <p id="viewTaskText" class="view-task-text"></p>
-      <button class="save-button" id="closeViewBottomButton" type="button">סגור, הבנתי</button>
+      <textarea id="viewTaskText" class="view-task-text" rows="5" aria-label="טקסט המטלה המלא"></textarea>
+      <button class="save-button" id="closeViewBottomButton" type="button">סגור, שמרי</button>
     </form>
   </dialog>
 
@@ -223,6 +223,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=23.6"></script>
+  <script src="app.js?v=23.7"></script>
 </body>
 </html>

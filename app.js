@@ -77,6 +77,7 @@ let shoppingItems = [];
 let recurringTasks = [];
 let editingTaskId = null;
 let deletingTaskId = null;
+let viewingTaskId = null;
 let sortMode = false;
 let activeList = "tasks";
 let editingRecurringId = null;
@@ -986,13 +987,42 @@ function updateCharCount() {
 }
 
 function openViewTaskDialog(task) {
-  viewTaskText.textContent = task.text;
+  viewingTaskId = task.id;
+  viewTaskText.value = task.text;
   viewTaskDialog.showModal();
+  setTimeout(() => {
+    viewTaskText.focus();
+    viewTaskText.setSelectionRange(viewTaskText.value.length, viewTaskText.value.length);
+  }, 40);
+}
+
+function saveViewTaskText() {
+  if (!viewingTaskId) return;
+  const newText = viewTaskText.value.trim();
+  if (!newText) return;
+  let changed = false;
+  tasks = tasks.map(item => {
+    if (item.id !== viewingTaskId) return item;
+    changed = true;
+    return { ...item, text: newText };
+  });
+  shoppingItems = shoppingItems.map(item => {
+    if (item.id !== viewingTaskId) return item;
+    changed = true;
+    return { ...item, text: newText };
+  });
+  if (changed) {
+    saveTasks();
+    saveShoppingItems();
+  }
 }
 
 function closeViewTaskDialog() {
+  saveViewTaskText();
   viewTaskDialog.close();
-  viewTaskText.textContent = "";
+  viewTaskText.value = "";
+  viewingTaskId = null;
+  renderTasks();
 }
 
 function openRecurringDialog() {
@@ -1175,32 +1205,36 @@ function createTaskRow(task) {
     headButton.hidden = task.done;
     headButton.addEventListener("click", () => setHeadTask(task.id));
 
-    const moveButton = document.createElement("button");
-    moveButton.className = "action-button move";
-    moveButton.type = "button";
-    moveButton.textContent = "↑";
-    moveButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
-    moveButton.title = "הקפצה לראש";
-    const openIndex = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item))).findIndex(item => item.id === task.id);
-    moveButton.disabled = task.done || openIndex === 0;
-    moveButton.addEventListener("click", () => moveTaskToTop(task.id));
+    const openItems = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item)));
+    const openIndex = openItems.findIndex(item => item.id === task.id);
+    const openCount = openItems.length;
 
+    const topButton = document.createElement("button");
+    topButton.className = "action-button move top";
+    topButton.type = "button";
+    topButton.textContent = "⇈";
+    topButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
+    topButton.title = "הקפצה לראש";
+    topButton.disabled = task.done || openIndex === 0;
+    topButton.addEventListener("click", () => moveTaskToTop(task.id));
+
+    const bottomButton = document.createElement("button");
+    bottomButton.className = "action-button move bottom";
+    bottomButton.type = "button";
+    bottomButton.textContent = "⇊";
+    bottomButton.setAttribute("aria-label", "הורידי מטלה לסוף הרשימה");
+    bottomButton.title = "הורדה לסוף";
+    bottomButton.disabled = task.done || openIndex === openCount - 1;
+    bottomButton.addEventListener("click", () => moveTaskToBottom(task.id));
 
     const tomorrowButton = document.createElement("button");
     tomorrowButton.className = "action-button tomorrow";
     tomorrowButton.type = "button";
-    tomorrowButton.textContent = "מחר";
-    tomorrowButton.setAttribute("aria-label", "לדחות את המטלה למחר");
-    tomorrowButton.title = "להעביר למחר";
+    tomorrowButton.textContent = "↷";
+    tomorrowButton.setAttribute("aria-label", "לא היום — להעביר למחר");
+    tomorrowButton.title = "לא היום";
     tomorrowButton.hidden = isShoppingMode() || task.done;
     tomorrowButton.addEventListener("click", () => postponeTaskToTomorrow(task.id));
-
-    const editButton = document.createElement("button");
-    editButton.className = "action-button edit";
-    editButton.type = "button";
-    editButton.textContent = "✎";
-    editButton.setAttribute("aria-label", "עריכת מטלה");
-    editButton.addEventListener("click", () => openTaskDialog("edit", task));
 
     const deleteButton = document.createElement("button");
     deleteButton.className = "action-button delete";
@@ -1209,7 +1243,7 @@ function createTaskRow(task) {
     deleteButton.setAttribute("aria-label", "מחיקת מטלה");
     deleteButton.addEventListener("click", () => openDeleteDialog(task.id));
 
-    actions.append(headButton, moveButton, tomorrowButton, editButton, deleteButton);
+    actions.append(headButton, topButton, bottomButton, tomorrowButton, deleteButton);
   }
 
   row.append(checkButton, textWrap, actions);

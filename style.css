@@ -484,13 +484,18 @@ textarea::placeholder { color: rgba(117, 111, 105, .62); }
 .view-task-text {
   max-height: min(52vh, 420px);
   overflow: auto;
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
   margin: 0 0 18px;
   padding: 16px;
   border-radius: 16px;
   background:
     repeating-linear-gradient(to bottom, transparent 0, transparent 33px, rgba(78, 134, 157, 0.16) 34px, transparent 35px),
     #fffdf8;
-  border: 1px solid rgba(23, 21, 19, .14);
+  border: 1.6px solid rgba(23, 21, 19, .24);
+  color: var(--ink);
+  font-family: inherit;
   font-size: 21px;
   line-height: 1.45;
   font-weight: 650;
@@ -1604,4 +1609,26 @@ body.shopping-mode .action-button.head.active {
   flex-wrap: wrap;
   justify-content: flex-end;
   max-width: calc(var(--tap) * 3);
+}
+
+/* v23.7 · cleaner main actions + edit inside full note */
+.action-button.tomorrow {
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.action-button.tomorrow:not(:disabled) {
+  background: transparent;
+  border: 0;
+}
+
+.task-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: calc(var(--tap) * 3);
+}
+
+.view-task-text:focus {
+  outline: 2px solid rgba(255, 218, 78, .85);
+  outline-offset: 2px;
 }
