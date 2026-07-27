@@ -1586,3 +1586,22 @@ body.shopping-mode .action-button.head.active {
 }
 .undo-done-button:active { transform: translateY(1px); box-shadow: none; }
 .done-list .task-actions { padding-inline-start: 2px; }
+
+
+/* v23.6 · postpone task to tomorrow */
+.action-button.tomorrow {
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: -.02em;
+}
+
+.action-button.tomorrow:not(:disabled) {
+  background: rgba(255, 240, 168, .55);
+  border: 1px dashed rgba(23, 21, 19, .22);
+}
+
+.task-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: calc(var(--tap) * 3);
+}

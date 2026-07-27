@@ -112,6 +112,15 @@ function todayKey() {
   return `${year}-${month}-${day}`;
 }
 
+function tomorrowKey() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const year = tomorrow.getFullYear();
+  const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
+  const day = String(tomorrow.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getTodayParts() {
   const now = new Date();
   return {
@@ -315,6 +324,20 @@ function updateTask(id, text, schedule = null) {
     } : {})
   } : item);
   setCurrentItems(items);
+  renderTasks();
+}
+
+function postponeTaskToTomorrow(id) {
+  if (isShoppingMode()) return;
+  tasks = tasks.map(item => item.id === id ? {
+    ...item,
+    scheduleMode: "from",
+    scheduleDate: tomorrowKey(),
+    scheduleTime: null,
+    scheduleRevealDays: 0,
+    onHead: false
+  } : item);
+  saveTasks();
   renderTasks();
 }
 
@@ -1163,6 +1186,15 @@ function createTaskRow(task) {
     moveButton.addEventListener("click", () => moveTaskToTop(task.id));
 
 
+    const tomorrowButton = document.createElement("button");
+    tomorrowButton.className = "action-button tomorrow";
+    tomorrowButton.type = "button";
+    tomorrowButton.textContent = "מחר";
+    tomorrowButton.setAttribute("aria-label", "לדחות את המטלה למחר");
+    tomorrowButton.title = "להעביר למחר";
+    tomorrowButton.hidden = isShoppingMode() || task.done;
+    tomorrowButton.addEventListener("click", () => postponeTaskToTomorrow(task.id));
+
     const editButton = document.createElement("button");
     editButton.className = "action-button edit";
     editButton.type = "button";
@@ -1177,7 +1209,7 @@ function createTaskRow(task) {
     deleteButton.setAttribute("aria-label", "מחיקת מטלה");
     deleteButton.addEventListener("click", () => openDeleteDialog(task.id));
 
-    actions.append(headButton, moveButton, editButton, deleteButton);
+    actions.append(headButton, moveButton, tomorrowButton, editButton, deleteButton);
   }
 
   row.append(checkButton, textWrap, actions);
