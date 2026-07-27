@@ -1134,7 +1134,26 @@ function createTaskRow(task) {
     metaWrap.appendChild(rosemaryChip);
   }
 
-  textWrap.appendChild(taskText);
+  const titleLine = document.createElement("div");
+  titleLine.className = "task-title-line";
+  titleLine.appendChild(taskText);
+
+  if (!task.done) {
+    const headButtonInline = document.createElement("button");
+    headButtonInline.className = `task-head-star ${task.onHead ? "active" : ""}`;
+    headButtonInline.type = "button";
+    headButtonInline.textContent = task.onHead ? "★" : "☆";
+    const priorityLabel = isShoppingMode() ? "הכי חשוב" : "על הראש";
+    headButtonInline.setAttribute("aria-label", task.onHead ? `לבטל ${priorityLabel}` : `לסמן ${priorityLabel}`);
+    headButtonInline.title = task.onHead ? `לבטל ${priorityLabel}` : priorityLabel;
+    headButtonInline.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setHeadTask(task.id);
+    });
+    titleLine.appendChild(headButtonInline);
+  }
+
+  textWrap.appendChild(titleLine);
   if (moreButton) textWrap.appendChild(moreButton);
   textWrap.appendChild(metaWrap);
 
@@ -1195,55 +1214,38 @@ function createTaskRow(task) {
 
     actions.append(topButton, upButton, downButton, bottomButton);
   } else {
-    const headButton = document.createElement("button");
-    headButton.className = `action-button head ${task.onHead ? "active" : ""}`;
-    headButton.type = "button";
-    headButton.textContent = "!";
-    const priorityLabel = isShoppingMode() ? "הכי חשוב" : "על הראש";
-    headButton.setAttribute("aria-label", task.onHead ? `לבטל ${priorityLabel}` : `לסמן ${priorityLabel}`);
-    headButton.title = task.onHead ? `לבטל ${priorityLabel}` : priorityLabel;
-    headButton.hidden = task.done;
-    headButton.addEventListener("click", () => setHeadTask(task.id));
-
     const openItems = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item)));
     const openIndex = openItems.findIndex(item => item.id === task.id);
     const openCount = openItems.length;
 
-    const topButton = document.createElement("button");
-    topButton.className = "action-button move top";
-    topButton.type = "button";
-    topButton.textContent = "⇈";
-    topButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
-    topButton.title = "הקפצה לראש";
-    topButton.disabled = task.done || openIndex === 0;
-    topButton.addEventListener("click", () => moveTaskToTop(task.id));
+    const upButton = document.createElement("button");
+    upButton.className = "action-button move up";
+    upButton.type = "button";
+    upButton.textContent = "↑";
+    upButton.setAttribute("aria-label", "העלי מטלה מקום אחד");
+    upButton.title = "לעלות מקום";
+    upButton.disabled = task.done || openIndex === 0;
+    upButton.addEventListener("click", () => moveTaskBy(task.id, -1));
 
-    const bottomButton = document.createElement("button");
-    bottomButton.className = "action-button move bottom";
-    bottomButton.type = "button";
-    bottomButton.textContent = "⇊";
-    bottomButton.setAttribute("aria-label", "הורידי מטלה לסוף הרשימה");
-    bottomButton.title = "הורדה לסוף";
-    bottomButton.disabled = task.done || openIndex === openCount - 1;
-    bottomButton.addEventListener("click", () => moveTaskToBottom(task.id));
+    const downButton = document.createElement("button");
+    downButton.className = "action-button move down";
+    downButton.type = "button";
+    downButton.textContent = "↓";
+    downButton.setAttribute("aria-label", "הורידי מטלה מקום אחד");
+    downButton.title = "להוריד מקום";
+    downButton.disabled = task.done || openIndex === openCount - 1;
+    downButton.addEventListener("click", () => moveTaskBy(task.id, 1));
 
     const tomorrowButton = document.createElement("button");
     tomorrowButton.className = "action-button tomorrow";
     tomorrowButton.type = "button";
-    tomorrowButton.textContent = "↷";
+    tomorrowButton.textContent = "מחר";
     tomorrowButton.setAttribute("aria-label", "לא היום — להעביר למחר");
     tomorrowButton.title = "לא היום";
     tomorrowButton.hidden = isShoppingMode() || task.done;
     tomorrowButton.addEventListener("click", () => postponeTaskToTomorrow(task.id));
 
-    const deleteButton = document.createElement("button");
-    deleteButton.className = "action-button delete";
-    deleteButton.type = "button";
-    deleteButton.textContent = "×";
-    deleteButton.setAttribute("aria-label", "מחיקת מטלה");
-    deleteButton.addEventListener("click", () => openDeleteDialog(task.id));
-
-    actions.append(headButton, topButton, bottomButton, tomorrowButton, deleteButton);
+    actions.append(upButton, downButton, tomorrowButton);
   }
 
   row.append(checkButton, textWrap, actions);
