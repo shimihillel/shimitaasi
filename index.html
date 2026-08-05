@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v23.7-actions-popup-edit -->
+  <!-- app-version: v24-future-calendar -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=23.8" />
+  <link rel="stylesheet" href="style.css?v=24" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -234,7 +234,23 @@
       <button class="icon-close" id="closeFutureButton" type="button" aria-label="סגירה">×</button>
       <h2><mark>עתידיות</mark></h2>
       <p class="backup-copy">דברים שכבר כתבת, אבל ביקשת שלא יציקו לפני הזמן.</p>
+      <div class="future-view-switch" role="group" aria-label="בחירת תצוגת עתידיות">
+        <button id="futureListViewButton" class="view-toggle active" type="button">רשימה</button>
+        <button id="futureCalendarViewButton" class="view-toggle" type="button">יומן</button>
+      </div>
       <div id="futureList" class="future-list"></div>
+      <div id="futureCalendarPanel" class="future-calendar-panel" hidden>
+        <div class="calendar-header">
+          <button id="calendarPrevButton" class="calendar-nav" type="button" aria-label="חודש קודם">‹</button>
+          <strong id="calendarMonthLabel"></strong>
+          <button id="calendarNextButton" class="calendar-nav" type="button" aria-label="חודש הבא">›</button>
+        </div>
+        <div class="calendar-weekdays" aria-hidden="true">
+          <span>א׳</span><span>ב׳</span><span>ג׳</span><span>ד׳</span><span>ה׳</span><span>ו׳</span><span>ש׳</span>
+        </div>
+        <div id="futureCalendarGrid" class="future-calendar-grid"></div>
+        <div id="futureCalendarDayList" class="future-calendar-day-list"></div>
+      </div>
     </div>
   </dialog>
 
@@ -251,6 +267,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=23.8"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>

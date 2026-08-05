@@ -94,6 +94,9 @@ let editingRecurringId = null;
 let deletingRecurringId = null;
 let doneCollapsed = { tasks: false, shopping: false };
 let suggestionCounts = {};
+let futureViewMode = "list";
+let calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let selectedCalendarDate = null;
 
 const weekdayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
@@ -120,6 +123,13 @@ function todayKey() {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function keyFromDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -762,6 +772,7 @@ function getFutureTasks() {
 }
 
 function renderFutureList() {
+  updateFutureViewMode();
   futureList.innerHTML = "";
   const futureTasks = getFutureTasks();
   if (futureTasks.length === 0) {
@@ -769,6 +780,7 @@ function renderFutureList() {
     empty.className = "recurring-empty";
     empty.textContent = "אין עתידיות כרגע. העתיד פנוי, איכשהו.";
     futureList.appendChild(empty);
+    renderFutureCalendar();
     return;
   }
 
@@ -776,6 +788,103 @@ function renderFutureList() {
   const from = futureTasks.filter(task => task.scheduleMode === "from");
   addFutureGroup("בתאריך מסוים", exact);
   addFutureGroup("החל מתאריך", from);
+  renderFutureCalendar();
+}
+
+function updateFutureViewMode() {
+  const calendarMode = futureViewMode === "calendar";
+  futureList.hidden = calendarMode;
+  futureCalendarPanel.hidden = !calendarMode;
+  futureListViewButton.classList.toggle("active", !calendarMode);
+  futureCalendarViewButton.classList.toggle("active", calendarMode);
+}
+
+function setFutureViewMode(mode) {
+  futureViewMode = mode;
+  updateFutureViewMode();
+  if (mode === "calendar") renderFutureCalendar();
+}
+
+function getCalendarTaskDate(task) {
+  return task.scheduleDate || getTaskRevealDate(task);
+}
+
+function getFutureTasksForDate(dateKey) {
+  return getFutureTasks().filter(task => getCalendarTaskDate(task) === dateKey);
+}
+
+function renderFutureCalendar() {
+  if (!futureCalendarGrid || !futureCalendarDayList) return;
+  futureCalendarGrid.innerHTML = "";
+  futureCalendarDayList.innerHTML = "";
+  const year = calendarCursor.getFullYear();
+  const month = calendarCursor.getMonth();
+  const today = todayKey();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  calendarMonthLabel.textContent = firstDay.toLocaleDateString("he-IL", { month: "long", year: "numeric" });
+
+  const futureTasks = getFutureTasks();
+  const taskCounts = futureTasks.reduce((acc, task) => {
+    const key = getCalendarTaskDate(task);
+    if (key) acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  for (let i = 0; i < firstDay.getDay(); i += 1) {
+    const blank = document.createElement("span");
+    blank.className = "calendar-day blank";
+    futureCalendarGrid.appendChild(blank);
+  }
+
+  for (let day = 1; day <= lastDay.getDate(); day += 1) {
+    const date = new Date(year, month, day);
+    const key = keyFromDate(date);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "calendar-day";
+    if (key === today) button.classList.add("today");
+    if (selectedCalendarDate === key) button.classList.add("selected");
+    if (taskCounts[key]) button.classList.add("has-items");
+    button.innerHTML = `<span>${day}</span>${taskCounts[key] ? `<em>${taskCounts[key]}</em>` : ""}`;
+    button.addEventListener("click", () => {
+      selectedCalendarDate = key;
+      renderFutureCalendar();
+    });
+    futureCalendarGrid.appendChild(button);
+  }
+
+  if (!selectedCalendarDate || dateFromKey(selectedCalendarDate)?.getMonth() !== month || dateFromKey(selectedCalendarDate)?.getFullYear() !== year) {
+    const keysInMonth = Object.keys(taskCounts).filter(key => {
+      const d = dateFromKey(key);
+      return d && d.getFullYear() === year && d.getMonth() === month;
+    }).sort();
+    selectedCalendarDate = keysInMonth[0] || keyFromDate(new Date(year, month, Math.min(new Date().getDate(), lastDay.getDate())));
+  }
+
+  renderFutureCalendarDayList();
+}
+
+function renderFutureCalendarDayList() {
+  futureCalendarDayList.innerHTML = "";
+  const heading = document.createElement("h3");
+  heading.textContent = formatCalendarDate(selectedCalendarDate, true);
+  futureCalendarDayList.appendChild(heading);
+  const items = getFutureTasksForDate(selectedCalendarDate);
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "calendar-empty";
+    empty.textContent = "אין כלום ביום הזה. רגע נדיר.";
+    futureCalendarDayList.appendChild(empty);
+    return;
+  }
+  items.forEach(task => {
+    const row = document.createElement("div");
+    row.className = "calendar-task-row";
+    const label = task.scheduleMode === "from" ? "החל מ־" : (task.scheduleTime || "בתאריך");
+    row.innerHTML = `<strong>${task.text}</strong><span>${label}</span>`;
+    futureCalendarDayList.appendChild(row);
+  });
 }
 
 function addFutureGroup(title, items) {
@@ -1493,6 +1602,18 @@ exportBackupButton.addEventListener("click", exportBackup);
 importBackupInput.addEventListener("change", event => importBackupFile(event.target.files?.[0]));
 futureButton.addEventListener("click", openFutureDialog);
 closeFutureButton.addEventListener("click", closeFutureDialog);
+futureListViewButton.addEventListener("click", () => setFutureViewMode("list"));
+futureCalendarViewButton.addEventListener("click", () => setFutureViewMode("calendar"));
+calendarPrevButton.addEventListener("click", () => {
+  calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() - 1, 1);
+  selectedCalendarDate = null;
+  renderFutureCalendar();
+});
+calendarNextButton.addEventListener("click", () => {
+  calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 1);
+  selectedCalendarDate = null;
+  renderFutureCalendar();
+});
 if (viewMoveToggle) viewMoveToggle.addEventListener("click", () => {
   viewMovePanel.hidden = !viewMovePanel.hidden;
   updateViewMoveVisibility();
