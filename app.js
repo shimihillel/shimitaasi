@@ -21,6 +21,15 @@ const viewTaskDialog = document.getElementById("viewTaskDialog");
 const viewTaskText = document.getElementById("viewTaskText");
 const closeViewDialogButton = document.getElementById("closeViewDialogButton");
 const closeViewBottomButton = document.getElementById("closeViewBottomButton");
+const viewMoveBlock = document.getElementById("viewMoveBlock");
+const viewMoveToggle = document.getElementById("viewMoveToggle");
+const viewMovePanel = document.getElementById("viewMovePanel");
+const viewMoveDateWrap = document.getElementById("viewMoveDateWrap");
+const viewMoveTimeWrap = document.getElementById("viewMoveTimeWrap");
+const viewMoveRevealWrap = document.getElementById("viewMoveRevealWrap");
+const viewMoveDate = document.getElementById("viewMoveDate");
+const viewMoveTime = document.getElementById("viewMoveTime");
+const viewMoveApply = document.getElementById("viewMoveApply");
 const sortModeButton = document.getElementById("sortModeButton");
 const appTitle = document.getElementById("appTitle");
 const appSubtitle = document.getElementById("appSubtitle");
@@ -78,6 +87,7 @@ let recurringTasks = [];
 let editingTaskId = null;
 let deletingTaskId = null;
 let viewingTaskId = null;
+let viewingTaskKind = null;
 let sortMode = false;
 let activeList = "tasks";
 let editingRecurringId = null;
@@ -330,16 +340,29 @@ function updateTask(id, text, schedule = null) {
 
 function postponeTaskToTomorrow(id) {
   if (isShoppingMode()) return;
-  tasks = tasks.map(item => item.id === id ? {
-    ...item,
-    scheduleMode: "from",
-    scheduleDate: tomorrowKey(),
-    scheduleTime: null,
-    scheduleRevealDays: 0,
-    onHead: false
-  } : item);
-  saveTasks();
-  renderTasks();
+  moveTaskToSchedule(id, "from", tomorrowKey(), null, 0);
+}
+
+function moveTaskToSchedule(id, mode, date, time = null, revealDays = 0) {
+  if (!id || !date || !["exact", "from"].includes(mode)) return false;
+  let moved = false;
+  tasks = tasks.map(item => {
+    if (item.id !== id) return item;
+    moved = true;
+    return {
+      ...item,
+      scheduleMode: mode,
+      scheduleDate: date,
+      scheduleTime: mode === "exact" ? (time || null) : null,
+      scheduleRevealDays: mode === "exact" ? Number(revealDays || 0) : 0,
+      onHead: false
+    };
+  });
+  if (moved) {
+    saveTasks();
+    renderTasks();
+  }
+  return moved;
 }
 
 function toggleDone(id) {
@@ -986,9 +1009,41 @@ function updateCharCount() {
   charCount.textContent = taskInput.value.length;
 }
 
+function resetViewMoveControls(task = null) {
+  if (!viewMoveBlock || !viewMovePanel) return;
+  const canMove = Boolean(task && !task.done && viewingTaskKind === "tasks");
+  viewMoveBlock.hidden = !canMove;
+  viewMovePanel.hidden = true;
+  if (!canMove) return;
+  const tomorrowInput = viewTaskDialog.querySelector('input[name="viewMoveMode"][value="tomorrow"]');
+  if (tomorrowInput) tomorrowInput.checked = true;
+  const revealInput = viewTaskDialog.querySelector('input[name="viewMoveReveal"][value="0"]');
+  if (revealInput) revealInput.checked = true;
+  if (viewMoveDate) viewMoveDate.value = tomorrowKey();
+  if (viewMoveTime) viewMoveTime.value = "";
+  updateViewMoveVisibility();
+}
+
+function updateViewMoveVisibility() {
+  if (!viewMovePanel || viewMovePanel.hidden) return;
+  const selected = viewTaskDialog.querySelector('input[name="viewMoveMode"]:checked');
+  const mode = selected ? selected.value : "tomorrow";
+  const needsDate = mode === "exact" || mode === "from";
+  viewMoveDateWrap.hidden = !needsDate;
+  viewMoveTimeWrap.hidden = mode !== "exact";
+  viewMoveRevealWrap.hidden = mode !== "exact";
+  if (mode === "tomorrow") {
+    viewMoveDate.value = tomorrowKey();
+    viewMoveTime.value = "";
+  }
+  if (mode === "from") viewMoveTime.value = "";
+}
+
 function openViewTaskDialog(task) {
   viewingTaskId = task.id;
+  viewingTaskKind = isShoppingMode() ? "shopping" : "tasks";
   viewTaskText.value = task.text;
+  resetViewMoveControls(task);
   viewTaskDialog.showModal();
   setTimeout(() => {
     viewTaskText.focus();
@@ -1001,19 +1056,20 @@ function saveViewTaskText() {
   const newText = viewTaskText.value.trim();
   if (!newText) return;
   let changed = false;
-  tasks = tasks.map(item => {
-    if (item.id !== viewingTaskId) return item;
-    changed = true;
-    return { ...item, text: newText };
-  });
-  shoppingItems = shoppingItems.map(item => {
-    if (item.id !== viewingTaskId) return item;
-    changed = true;
-    return { ...item, text: newText };
-  });
-  if (changed) {
-    saveTasks();
-    saveShoppingItems();
+  if (viewingTaskKind === "shopping") {
+    shoppingItems = shoppingItems.map(item => {
+      if (item.id !== viewingTaskId) return item;
+      changed = true;
+      return { ...item, text: newText };
+    });
+    if (changed) saveShoppingItems();
+  } else {
+    tasks = tasks.map(item => {
+      if (item.id !== viewingTaskId) return item;
+      changed = true;
+      return { ...item, text: newText };
+    });
+    if (changed) saveTasks();
   }
 }
 
@@ -1022,7 +1078,26 @@ function closeViewTaskDialog() {
   viewTaskDialog.close();
   viewTaskText.value = "";
   viewingTaskId = null;
+  viewingTaskKind = null;
+  if (viewMovePanel) viewMovePanel.hidden = true;
   renderTasks();
+}
+
+function applyViewMove() {
+  if (!viewingTaskId || viewingTaskKind !== "tasks") return;
+  const selected = viewTaskDialog.querySelector('input[name="viewMoveMode"]:checked');
+  const picked = selected ? selected.value : "tomorrow";
+  const mode = picked === "tomorrow" ? "from" : picked;
+  const date = picked === "tomorrow" ? tomorrowKey() : (viewMoveDate.value || "");
+  const time = mode === "exact" ? (viewMoveTime.value || null) : null;
+  const revealDays = mode === "exact" ? Number(viewTaskDialog.querySelector('input[name="viewMoveReveal"]:checked')?.value || 0) : 0;
+  if (!date) {
+    viewMoveDate.focus();
+    return;
+  }
+  saveViewTaskText();
+  const moved = moveTaskToSchedule(viewingTaskId, mode, date, time, revealDays);
+  if (moved) closeViewTaskDialog();
 }
 
 function openRecurringDialog() {
@@ -1418,6 +1493,12 @@ exportBackupButton.addEventListener("click", exportBackup);
 importBackupInput.addEventListener("change", event => importBackupFile(event.target.files?.[0]));
 futureButton.addEventListener("click", openFutureDialog);
 closeFutureButton.addEventListener("click", closeFutureDialog);
+if (viewMoveToggle) viewMoveToggle.addEventListener("click", () => {
+  viewMovePanel.hidden = !viewMovePanel.hidden;
+  updateViewMoveVisibility();
+});
+if (viewMoveApply) viewMoveApply.addEventListener("click", applyViewMove);
+viewTaskDialog.querySelectorAll('input[name="viewMoveMode"]').forEach(input => input.addEventListener("change", updateViewMoveVisibility));
 taskForm.querySelectorAll('input[name="scheduleMode"]').forEach(input => input.addEventListener("change", updateScheduleVisibility));
 closeDialogButton.addEventListener("click", closeTaskDialog);
 taskInput.addEventListener("input", () => { updateCharCount(); });

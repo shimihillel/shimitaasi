@@ -108,6 +108,34 @@
       <button class="icon-close" id="closeViewDialogButton" type="button" aria-label="סגירה">×</button>
       <h2><mark>הפתק המלא</mark></h2>
       <textarea id="viewTaskText" class="view-task-text" rows="5" aria-label="טקסט המטלה המלא"></textarea>
+      <div id="viewMoveBlock" class="view-move-block" hidden>
+        <button class="secondary-button view-move-toggle" id="viewMoveToggle" type="button">בוא נזיז</button>
+        <div id="viewMovePanel" class="view-move-panel" hidden>
+          <p class="field-label">לאן מזיזות?</p>
+          <div class="schedule-mode-options view-move-options" role="radiogroup" aria-label="בחירת הזזת מטלה">
+            <label><input type="radio" name="viewMoveMode" value="tomorrow" checked /> מחר</label>
+            <label><input type="radio" name="viewMoveMode" value="exact" /> בתאריך מסוים</label>
+            <label><input type="radio" name="viewMoveMode" value="from" /> החל מתאריך</label>
+          </div>
+          <div id="viewMoveDateWrap" class="schedule-date-wrap" hidden>
+            <label class="field-label" for="viewMoveDate">תאריך</label>
+            <input id="viewMoveDate" class="schedule-date-input" type="date" />
+          </div>
+          <div id="viewMoveTimeWrap" class="schedule-time-wrap" hidden>
+            <label class="field-label" for="viewMoveTime">שעה <span class="optional-note">(לא חובה)</span></label>
+            <input id="viewMoveTime" class="schedule-time-input" type="time" />
+          </div>
+          <div id="viewMoveRevealWrap" class="schedule-reveal-wrap" hidden>
+            <p class="field-label">מתי להתחיל להציג?</p>
+            <div class="reveal-options" role="radiogroup" aria-label="מועד תחילת הצגת המטלה אחרי הזזה">
+              <label><input type="radio" name="viewMoveReveal" value="3" /> 3 ימים לפני</label>
+              <label><input type="radio" name="viewMoveReveal" value="1" /> יום לפני</label>
+              <label><input type="radio" name="viewMoveReveal" value="0" checked /> ביום עצמו בלבד</label>
+            </div>
+          </div>
+          <button class="save-button view-move-apply" id="viewMoveApply" type="button">תזיזי</button>
+        </div>
+      </div>
       <button class="save-button" id="closeViewBottomButton" type="button">שמרי וסגרי</button>
     </form>
   </dialog>

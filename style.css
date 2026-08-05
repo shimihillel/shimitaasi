@@ -1705,3 +1705,34 @@ body.shopping-mode .task-actions .action-button.tomorrow {
   opacity: .35;
   pointer-events: none;
 }
+
+
+/* v23.9 · move task from the full-note popup */
+.view-move-block {
+  display: grid;
+  gap: 10px;
+  margin: -4px 0 14px;
+}
+.view-move-block[hidden],
+.view-move-panel[hidden] { display: none !important; }
+.view-move-toggle {
+  min-height: 42px;
+  justify-self: stretch;
+  border-style: dashed;
+  background: rgba(255, 240, 168, .32);
+}
+.view-move-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1.5px dashed rgba(23,21,19,.22);
+  border-radius: 16px;
+  background: rgba(255,253,248,.62);
+}
+.view-move-panel .field-label {
+  margin-top: 2px;
+}
+.view-move-apply {
+  min-height: 42px;
+  margin-top: 2px;
+}
