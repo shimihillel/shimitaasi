@@ -692,6 +692,10 @@ function getHeadTask() {
   return tasks.find(task => task.onHead && !task.done && isTaskVisibleNow(task));
 }
 
+function getUrgentShoppingItem() {
+  return shoppingItems.find(item => item.onHead && !item.done);
+}
+
 function registerAchievement(item) {
   const today = todayKey();
   let data;
@@ -1436,28 +1440,62 @@ function createTaskRow(task) {
   return row;
 }
 
-function renderHeadNote() {
-  if (!headNote) return;
-  headNote.innerHTML = "";
-  const headTask = getHeadTask();
-  const show = !isShoppingMode() && headTask;
-  headNote.hidden = !show;
-  if (!show) return;
+function createHeadNoteRow({ labelText, text, onOpen, onClear, clearText = "×", clearLabel = "הסרה", extraClass = "" }) {
+  const row = document.createElement("div");
+  row.className = `head-note-row${extraClass ? ` ${extraClass}` : ""}`;
 
   const label = document.createElement("span");
-  label.textContent = "על הראש";
+  label.textContent = labelText;
+
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "head-note-button";
-  btn.textContent = headTask.text;
-  btn.addEventListener("click", () => openViewTaskDialog(headTask));
+  btn.textContent = text;
+  btn.addEventListener("click", onOpen);
+
   const clear = document.createElement("button");
   clear.type = "button";
   clear.className = "head-note-clear";
-  clear.textContent = "×";
-  clear.setAttribute("aria-label", "להוריד מהראש");
-  clear.addEventListener("click", () => setHeadTask(headTask.id));
-  headNote.append(label, btn, clear);
+  clear.textContent = clearText;
+  clear.setAttribute("aria-label", clearLabel);
+  clear.addEventListener("click", onClear);
+
+  row.append(label, btn, clear);
+  return row;
+}
+
+function renderHeadNote() {
+  if (!headNote) return;
+  headNote.innerHTML = "";
+
+  const headTask = getHeadTask();
+  const urgentShoppingItem = getUrgentShoppingItem();
+  const show = !isShoppingMode() && (headTask || urgentShoppingItem);
+  headNote.hidden = !show;
+  if (!show) return;
+
+  if (headTask) {
+    headNote.appendChild(createHeadNoteRow({
+      labelText: "על הראש",
+      text: headTask.text,
+      onOpen: () => openViewTaskDialog(headTask),
+      onClear: () => setHeadTask(headTask.id),
+      clearText: "×",
+      clearLabel: "להוריד מהראש"
+    }));
+  }
+
+  if (urgentShoppingItem) {
+    headNote.appendChild(createHeadNoteRow({
+      labelText: "לקנות דחוף",
+      text: urgentShoppingItem.text,
+      onOpen: () => switchList("shopping"),
+      onClear: () => switchList("shopping"),
+      clearText: "›",
+      clearLabel: "לעבור לקניות",
+      extraClass: "urgent-shopping-note"
+    }));
+  }
 }
 
 function renderTasks() {
