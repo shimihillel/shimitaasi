@@ -813,8 +813,28 @@ function getCalendarTaskDate(task) {
   return task.scheduleDate || getTaskRevealDate(task);
 }
 
+function isCalendarTask(task) {
+  return Boolean(
+    task &&
+    !task.done &&
+    task.scheduleDate &&
+    task.scheduleMode &&
+    task.scheduleMode !== "now"
+  );
+}
+
+function getCalendarTasks() {
+  return tasks
+    .filter(isCalendarTask)
+    .sort((a, b) => {
+      const dateCompare = String(getCalendarTaskDate(a)).localeCompare(String(getCalendarTaskDate(b)));
+      if (dateCompare !== 0) return dateCompare;
+      return String(a.scheduleTime || "99:99").localeCompare(String(b.scheduleTime || "99:99"));
+    });
+}
+
 function getFutureTasksForDate(dateKey) {
-  return getFutureTasks().filter(task => getCalendarTaskDate(task) === dateKey);
+  return getCalendarTasks().filter(task => getCalendarTaskDate(task) === dateKey);
 }
 
 function renderFutureCalendar() {
@@ -828,8 +848,8 @@ function renderFutureCalendar() {
   const lastDay = new Date(year, month + 1, 0);
   calendarMonthLabel.textContent = firstDay.toLocaleDateString("he-IL", { month: "long", year: "numeric" });
 
-  const futureTasks = getFutureTasks();
-  const taskCounts = futureTasks.reduce((acc, task) => {
+  const calendarTasks = getCalendarTasks();
+  const taskCounts = calendarTasks.reduce((acc, task) => {
     const key = getCalendarTaskDate(task);
     if (key) acc[key] = (acc[key] || 0) + 1;
     return acc;
@@ -885,8 +905,9 @@ function renderFutureCalendarDayList() {
   items.forEach(task => {
     const row = document.createElement("div");
     row.className = "calendar-task-row";
+    const visibleNow = isTaskVisibleNow(task);
     const label = task.scheduleMode === "from" ? "החל מ־" : (task.scheduleTime || "בתאריך");
-    row.innerHTML = `<strong>${task.text}</strong><span>${label}</span>`;
+    row.innerHTML = `<strong>${task.text}</strong><span>${label}${visibleNow ? " · ברשימה" : ""}</span>`;
     futureCalendarDayList.appendChild(row);
   });
 }
