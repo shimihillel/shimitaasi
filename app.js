@@ -1603,7 +1603,17 @@ function createActiveRangeNote(task) {
   const progressText = document.createElement("em");
   progressText.textContent = progress ? `יום ${progress.current} מתוך ${progress.total}` : "";
 
-  row.append(label, content, barWrap, progressText);
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "range-note-delete";
+  deleteButton.textContent = "×";
+  deleteButton.setAttribute("aria-label", "מחיקת טווח");
+  deleteButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openDeleteDialog(task.id);
+  });
+
+  row.append(label, content, deleteButton, barWrap, progressText);
   return row;
 }
 

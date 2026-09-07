@@ -2512,6 +2512,29 @@ body.shopping-mode .task-row.shopping-priority {
   opacity: .72;
 }
 
+
+.range-note-delete {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.58);
+  color: rgba(43,38,33,.72);
+  display: inline-grid;
+  place-items: center;
+  font-size: 25px;
+  font-weight: 850;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.range-note-delete:active {
+  transform: scale(.96);
+  background: rgba(255,240,168,.72);
+}
+
 .calendar-day.has-range {
   background: rgba(211,231,242,.82);
   border-color: rgba(80,134,160,.42);
