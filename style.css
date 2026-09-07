@@ -2551,3 +2551,24 @@ body.shopping-mode .task-row.shopping-priority {
 }
 
 .calendar-task-row { cursor: pointer; }
+
+/* v26.2 · delete from full task popup */
+.view-dialog-actions {
+  display: grid;
+  grid-template-columns: minmax(96px, .42fr) 1fr;
+  gap: 10px;
+  align-items: stretch;
+  margin-top: 12px;
+}
+
+.view-dialog-actions .save-button,
+.view-dialog-actions .secondary-button {
+  width: 100%;
+  min-height: 48px;
+}
+
+.view-delete-button {
+  color: #2b2622;
+  background: rgba(255, 213, 219, .78);
+  border-color: rgba(43, 38, 34, .5);
+}

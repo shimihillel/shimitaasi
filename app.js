@@ -21,6 +21,7 @@ const viewTaskDialog = document.getElementById("viewTaskDialog");
 const viewTaskText = document.getElementById("viewTaskText");
 const closeViewDialogButton = document.getElementById("closeViewDialogButton");
 const closeViewBottomButton = document.getElementById("closeViewBottomButton");
+const deleteViewTaskButton = document.getElementById("deleteViewTaskButton");
 const viewMoveBlock = document.getElementById("viewMoveBlock");
 const viewMoveToggle = document.getElementById("viewMoveToggle");
 const viewMovePanel = document.getElementById("viewMovePanel");
@@ -1300,6 +1301,17 @@ function closeViewTaskDialog() {
   renderTasks();
 }
 
+function deleteViewedTask() {
+  if (!viewingTaskId) return;
+  const idToDelete = viewingTaskId;
+  viewTaskDialog.close();
+  viewTaskText.value = "";
+  viewingTaskId = null;
+  viewingTaskKind = null;
+  if (viewMovePanel) viewMovePanel.hidden = true;
+  openDeleteDialog(idToDelete);
+}
+
 function applyViewMove() {
   if (!viewingTaskId || viewingTaskKind !== "tasks") return;
   const selected = viewTaskDialog.querySelector('input[name="viewMoveMode"]:checked');
@@ -1858,6 +1870,7 @@ taskForm.addEventListener("submit", event => {
 cancelDeleteButton.addEventListener("click", closeDeleteDialog);
 closeViewDialogButton.addEventListener("click", closeViewTaskDialog);
 closeViewBottomButton.addEventListener("click", closeViewTaskDialog);
+if (deleteViewTaskButton) deleteViewTaskButton.addEventListener("click", deleteViewedTask);
 confirmDeleteButton.addEventListener("click", () => {
   if (deletingTaskId) deleteTask(deletingTaskId);
   closeDeleteDialog();

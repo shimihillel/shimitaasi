@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v26.1-range-delete -->
+  <!-- app-version: v26.2-popup-delete -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=26.1" />
+  <link rel="stylesheet" href="style.css?v=26.2" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -146,7 +146,10 @@
           <button class="save-button view-move-apply" id="viewMoveApply" type="button">תזיזי</button>
         </div>
       </div>
-      <button class="save-button" id="closeViewBottomButton" type="button">שמרי וסגרי</button>
+      <div class="view-dialog-actions">
+        <button class="secondary-button view-delete-button" id="deleteViewTaskButton" type="button">למחוק</button>
+        <button class="save-button" id="closeViewBottomButton" type="button">שמרי וסגרי</button>
+      </div>
     </form>
   </dialog>
 
@@ -277,6 +280,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=26.1"></script>
+  <script src="app.js?v=26.2"></script>
 </body>
 </html>
