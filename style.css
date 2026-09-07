@@ -2455,3 +2455,76 @@ body.shopping-mode .task-row.shopping-priority {
   .task-actions .action-button.move { width: 32px; min-width: 32px; }
   .task-actions .action-button.tomorrow { min-width: 44px; padding-inline: 8px; }
 }
+
+/* v26 · date-range tasks */
+.schedule-mode-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.range-note-row {
+  background: linear-gradient(135deg, rgba(211,231,242,.92), rgba(255,252,246,.72));
+  border-color: rgba(80, 134, 160, .22);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px 10px;
+  align-items: center;
+}
+
+.range-note-button {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+
+.range-note-button strong {
+  font-size: 15.5px;
+  font-weight: 950;
+}
+
+.range-note-button small {
+  font-size: 11px;
+  font-weight: 850;
+  opacity: .68;
+}
+
+.range-progress-wrap {
+  grid-column: 1 / -1;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,.72);
+  box-shadow: inset 0 0 0 1px rgba(43,38,33,.10);
+}
+
+.range-progress-bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8cb6cd, #b9d2df);
+}
+
+.range-note-row em {
+  grid-column: 1 / -1;
+  justify-self: start;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 900;
+  opacity: .72;
+}
+
+.calendar-day.has-range {
+  background: rgba(211,231,242,.82);
+  border-color: rgba(80,134,160,.42);
+}
+
+.calendar-day.has-range.has-items {
+  background: linear-gradient(135deg, rgba(211,231,242,.92), rgba(255,240,168,.76));
+}
+
+.calendar-task-row.range-calendar-task {
+  background: rgba(211,231,242,.56);
+  border-color: rgba(80,134,160,.22);
+  cursor: pointer;
+}
+
+.calendar-task-row { cursor: pointer; }

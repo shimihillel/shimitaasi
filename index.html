@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v25.1-calendar-keeps-dated -->
+  <!-- app-version: v26-date-range -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=25.1" />
+  <link rel="stylesheet" href="style.css?v=26" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -69,10 +69,15 @@
           <label><input type="radio" name="scheduleMode" value="now" checked /> עכשיו</label>
           <label><input type="radio" name="scheduleMode" value="exact" /> בתאריך מסוים</label>
           <label><input type="radio" name="scheduleMode" value="from" /> החל מתאריך</label>
+          <label><input type="radio" name="scheduleMode" value="range" /> בין תאריכים</label>
         </div>
         <div id="scheduleDateWrap" class="schedule-date-wrap" hidden>
           <label class="field-label" for="scheduleDate">תאריך</label>
           <input id="scheduleDate" class="schedule-date-input" type="date" />
+        </div>
+        <div id="scheduleEndDateWrap" class="schedule-date-wrap" hidden>
+          <label class="field-label" for="scheduleEndDate">עד תאריך</label>
+          <input id="scheduleEndDate" class="schedule-date-input" type="date" />
         </div>
         <div id="scheduleTimeWrap" class="schedule-time-wrap" hidden>
           <label class="field-label" for="scheduleTime">שעה <span class="optional-note">(לא חובה)</span></label>
@@ -116,10 +121,15 @@
             <label><input type="radio" name="viewMoveMode" value="tomorrow" checked /> מחר</label>
             <label><input type="radio" name="viewMoveMode" value="exact" /> בתאריך מסוים</label>
             <label><input type="radio" name="viewMoveMode" value="from" /> החל מתאריך</label>
+            <label><input type="radio" name="viewMoveMode" value="range" /> בין תאריכים</label>
           </div>
           <div id="viewMoveDateWrap" class="schedule-date-wrap" hidden>
             <label class="field-label" for="viewMoveDate">תאריך</label>
             <input id="viewMoveDate" class="schedule-date-input" type="date" />
+          </div>
+          <div id="viewMoveEndDateWrap" class="schedule-date-wrap" hidden>
+            <label class="field-label" for="viewMoveEndDate">עד תאריך</label>
+            <input id="viewMoveEndDate" class="schedule-date-input" type="date" />
           </div>
           <div id="viewMoveTimeWrap" class="schedule-time-wrap" hidden>
             <label class="field-label" for="viewMoveTime">שעה <span class="optional-note">(לא חובה)</span></label>
@@ -235,8 +245,8 @@
       <h2><mark>עתידיות</mark></h2>
       <p class="backup-copy">דברים שכבר כתבת, אבל ביקשת שלא יציקו לפני הזמן.</p>
       <div class="future-view-switch" role="group" aria-label="בחירת תצוגת עתידיות">
-        <button id="futureListViewButton" class="view-toggle active" type="button">רשימה</button>
-        <button id="futureCalendarViewButton" class="view-toggle" type="button">יומן</button>
+        <button id="futureCalendarViewButton" class="view-toggle active" type="button">יומן</button>
+        <button id="futureListViewButton" class="view-toggle" type="button">רשימה</button>
       </div>
       <div id="futureList" class="future-list"></div>
       <div id="futureCalendarPanel" class="future-calendar-panel" hidden>
@@ -267,6 +277,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=25.1"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>

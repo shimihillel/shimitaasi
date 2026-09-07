@@ -25,9 +25,11 @@ const viewMoveBlock = document.getElementById("viewMoveBlock");
 const viewMoveToggle = document.getElementById("viewMoveToggle");
 const viewMovePanel = document.getElementById("viewMovePanel");
 const viewMoveDateWrap = document.getElementById("viewMoveDateWrap");
+const viewMoveEndDateWrap = document.getElementById("viewMoveEndDateWrap");
 const viewMoveTimeWrap = document.getElementById("viewMoveTimeWrap");
 const viewMoveRevealWrap = document.getElementById("viewMoveRevealWrap");
 const viewMoveDate = document.getElementById("viewMoveDate");
+const viewMoveEndDate = document.getElementById("viewMoveEndDate");
 const viewMoveTime = document.getElementById("viewMoveTime");
 const viewMoveApply = document.getElementById("viewMoveApply");
 const sortModeButton = document.getElementById("sortModeButton");
@@ -48,8 +50,10 @@ const futureList = document.getElementById("futureList");
 const closeFutureButton = document.getElementById("closeFutureButton");
 const scheduleField = document.getElementById("scheduleField");
 const scheduleDateWrap = document.getElementById("scheduleDateWrap");
+const scheduleEndDateWrap = document.getElementById("scheduleEndDateWrap");
 const scheduleTimeWrap = document.getElementById("scheduleTimeWrap");
 const scheduleDate = document.getElementById("scheduleDate");
+const scheduleEndDate = document.getElementById("scheduleEndDate");
 const scheduleTime = document.getElementById("scheduleTime");
 const suggestionsBox = document.getElementById("suggestionsBox");
 const headNote = document.getElementById("headNote");
@@ -94,7 +98,7 @@ let editingRecurringId = null;
 let deletingRecurringId = null;
 let doneCollapsed = { tasks: false, shopping: false };
 let suggestionCounts = {};
-let futureViewMode = "list";
+let futureViewMode = "calendar";
 let calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let selectedCalendarDate = null;
 
@@ -171,9 +175,50 @@ function daysBetweenKeys(fromKey, toKey) {
   return Math.floor((toDate - fromDate) / 86400000);
 }
 
+function compareDateKeys(a, b) {
+  return String(a || "").localeCompare(String(b || ""));
+}
+
+function isRangeTask(task) {
+  return Boolean(task && task.scheduleMode === "range" && task.scheduleDate && task.scheduleEndDate);
+}
+
+function isActiveRangeTask(task) {
+  if (!isRangeTask(task) || task.done) return false;
+  const today = todayKey();
+  return compareDateKeys(task.scheduleDate, today) <= 0 && compareDateKeys(today, task.scheduleEndDate) <= 0;
+}
+
+function isExpiredRangeTask(task) {
+  if (!isRangeTask(task) || task.done) return false;
+  return compareDateKeys(task.scheduleEndDate, todayKey()) < 0;
+}
+
+function isDateInTaskRange(dateKey, task) {
+  return Boolean(isRangeTask(task) && compareDateKeys(task.scheduleDate, dateKey) <= 0 && compareDateKeys(dateKey, task.scheduleEndDate) <= 0);
+}
+
+function formatDateRange(task) {
+  if (!isRangeTask(task)) return "";
+  return `${formatCalendarDate(task.scheduleDate, false)}–${formatCalendarDate(task.scheduleEndDate, false)}`;
+}
+
+function getRangeProgress(task) {
+  if (!isActiveRangeTask(task)) return null;
+  const total = daysBetweenKeys(task.scheduleDate, task.scheduleEndDate) + 1;
+  const current = daysBetweenKeys(task.scheduleDate, todayKey()) + 1;
+  const safeTotal = Math.max(1, total);
+  const safeCurrent = Math.min(Math.max(1, current), safeTotal);
+  return {
+    current: safeCurrent,
+    total: safeTotal,
+    percent: Math.round((safeCurrent / safeTotal) * 100)
+  };
+}
+
 function getTaskRevealDate(task) {
   if (!task || !task.scheduleDate || !task.scheduleMode || task.scheduleMode === "now") return null;
-  if (task.scheduleMode === "from") return task.scheduleDate;
+  if (task.scheduleMode === "from" || task.scheduleMode === "range") return task.scheduleDate;
   const eventDate = dateFromKey(task.scheduleDate);
   if (!eventDate) return task.scheduleDate;
   const leadDays = Math.max(0, Math.min(3, Number(task.scheduleRevealDays) || 0));
@@ -185,11 +230,13 @@ function getTaskRevealDate(task) {
 }
 
 function isFutureTask(task) {
+  if (isRangeTask(task)) return compareDateKeys(task.scheduleDate, todayKey()) > 0;
   const revealDate = getTaskRevealDate(task);
   return Boolean(revealDate && revealDate > todayKey());
 }
 
 function isTaskVisibleNow(task) {
+  if (isRangeTask(task)) return isActiveRangeTask(task);
   return !isFutureTask(task);
 }
 
@@ -212,6 +259,9 @@ function formatCalendarDate(dateKey, includeWeekday = true) {
 }
 
 function formatTaskMeta(task) {
+  if (task.scheduleMode === "range" && task.scheduleDate && task.scheduleEndDate) {
+    return formatDateRange(task);
+  }
   if (task.scheduleMode === "exact" && task.scheduleDate) {
     return `${formatCalendarDate(task.scheduleDate)}${task.scheduleTime ? ` · ${task.scheduleTime}` : ""}`;
   }
@@ -302,7 +352,7 @@ function saveRecurringTasks() {
 
 function removeOldDoneTasks() {
   const today = todayKey();
-  tasks = tasks.filter(task => !task.done || task.doneAt === today);
+  tasks = tasks.filter(task => (!task.done || task.doneAt === today) && !isExpiredRangeTask(task));
   shoppingItems = shoppingItems.filter(item => !item.done || item.doneAt === today);
 }
 
@@ -317,6 +367,7 @@ function createTask(text, recurringId = null, schedule = null, extra = {}) {
     onHead: false,
     scheduleMode: isShoppingMode() ? "now" : (schedule?.mode || "now"),
     scheduleDate: isShoppingMode() ? null : (schedule?.date || null),
+    scheduleEndDate: isShoppingMode() ? null : (schedule?.mode === "range" ? (schedule?.endDate || null) : null),
     scheduleTime: isShoppingMode() ? null : (schedule?.mode === "exact" ? (schedule?.time || null) : null),
     scheduleRevealDays: isShoppingMode() ? 0 : (schedule?.mode === "exact" ? Number(schedule?.revealDays || 0) : 0),
     specialType: extra.specialType || null
@@ -340,6 +391,7 @@ function updateTask(id, text, schedule = null) {
     ...(schedule ? {
       scheduleMode: schedule.mode,
       scheduleDate: schedule.date || null,
+      scheduleEndDate: schedule.mode === "range" ? (schedule.endDate || null) : null,
       scheduleTime: schedule.mode === "exact" ? (schedule.time || null) : null,
       scheduleRevealDays: schedule.mode === "exact" ? Number(schedule.revealDays || 0) : 0
     } : {})
@@ -353,8 +405,9 @@ function postponeTaskToTomorrow(id) {
   moveTaskToSchedule(id, "from", tomorrowKey(), null, 0);
 }
 
-function moveTaskToSchedule(id, mode, date, time = null, revealDays = 0) {
-  if (!id || !date || !["exact", "from"].includes(mode)) return false;
+function moveTaskToSchedule(id, mode, date, time = null, revealDays = 0, endDate = null) {
+  if (!id || !date || !["exact", "from", "range"].includes(mode)) return false;
+  if (mode === "range" && !endDate) return false;
   let moved = false;
   tasks = tasks.map(item => {
     if (item.id !== id) return item;
@@ -363,6 +416,7 @@ function moveTaskToSchedule(id, mode, date, time = null, revealDays = 0) {
       ...item,
       scheduleMode: mode,
       scheduleDate: date,
+      scheduleEndDate: mode === "range" ? endDate : null,
       scheduleTime: mode === "exact" ? (time || null) : null,
       scheduleRevealDays: mode === "exact" ? Number(revealDays || 0) : 0,
       onHead: false
@@ -514,6 +568,7 @@ function generateDueRecurringTasks() {
       onHead: false,
       scheduleMode: "now",
       scheduleDate: null,
+      scheduleEndDate: null,
       scheduleTime: null
     });
 
@@ -790,8 +845,10 @@ function renderFutureList() {
 
   const exact = futureTasks.filter(task => task.scheduleMode === "exact");
   const from = futureTasks.filter(task => task.scheduleMode === "from");
+  const range = futureTasks.filter(task => task.scheduleMode === "range");
   addFutureGroup("בתאריך מסוים", exact);
   addFutureGroup("החל מתאריך", from);
+  addFutureGroup("בין תאריכים", range);
   renderFutureCalendar();
 }
 
@@ -819,7 +876,8 @@ function isCalendarTask(task) {
     !task.done &&
     task.scheduleDate &&
     task.scheduleMode &&
-    task.scheduleMode !== "now"
+    task.scheduleMode !== "now" &&
+    !isExpiredRangeTask(task)
   );
 }
 
@@ -834,7 +892,7 @@ function getCalendarTasks() {
 }
 
 function getFutureTasksForDate(dateKey) {
-  return getCalendarTasks().filter(task => getCalendarTaskDate(task) === dateKey);
+  return getCalendarTasks().filter(task => isRangeTask(task) ? isDateInTaskRange(dateKey, task) : getCalendarTaskDate(task) === dateKey);
 }
 
 function renderFutureCalendar() {
@@ -849,11 +907,23 @@ function renderFutureCalendar() {
   calendarMonthLabel.textContent = firstDay.toLocaleDateString("he-IL", { month: "long", year: "numeric" });
 
   const calendarTasks = getCalendarTasks();
-  const taskCounts = calendarTasks.reduce((acc, task) => {
+  const taskCounts = {};
+  const rangeDays = {};
+  calendarTasks.forEach(task => {
+    if (isRangeTask(task)) {
+      const start = dateFromKey(task.scheduleDate);
+      const end = dateFromKey(task.scheduleEndDate);
+      if (!start || !end) return;
+      for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const key = keyFromDate(d);
+        taskCounts[key] = (taskCounts[key] || 0) + 1;
+        rangeDays[key] = true;
+      }
+      return;
+    }
     const key = getCalendarTaskDate(task);
-    if (key) acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
+    if (key) taskCounts[key] = (taskCounts[key] || 0) + 1;
+  });
 
   for (let i = 0; i < firstDay.getDay(); i += 1) {
     const blank = document.createElement("span");
@@ -868,6 +938,7 @@ function renderFutureCalendar() {
     button.type = "button";
     button.className = "calendar-day";
     if (key === today) button.classList.add("today");
+    if (rangeDays[key]) button.classList.add("has-range");
     if (selectedCalendarDate === key) button.classList.add("selected");
     if (taskCounts[key]) button.classList.add("has-items");
     button.innerHTML = `<span>${day}</span>${taskCounts[key] ? `<em>${taskCounts[key]}</em>` : ""}`;
@@ -904,10 +975,11 @@ function renderFutureCalendarDayList() {
   }
   items.forEach(task => {
     const row = document.createElement("div");
-    row.className = "calendar-task-row";
+    row.className = `calendar-task-row${isRangeTask(task) ? " range-calendar-task" : ""}`;
     const visibleNow = isTaskVisibleNow(task);
-    const label = task.scheduleMode === "from" ? "החל מ־" : (task.scheduleTime || "בתאריך");
+    const label = isRangeTask(task) ? `בין תאריכים · ${formatDateRange(task)}` : (task.scheduleMode === "from" ? "החל מ־" : (task.scheduleTime || "בתאריך"));
     row.innerHTML = `<strong>${task.text}</strong><span>${label}${visibleNow ? " · ברשימה" : ""}</span>`;
+    row.addEventListener("click", () => openViewTaskDialog(task));
     futureCalendarDayList.appendChild(row);
   });
 }
@@ -933,7 +1005,9 @@ function createFutureRow(task) {
   const meta = document.createElement("span");
   meta.textContent = task.scheduleMode === "exact"
     ? `${formatCalendarDate(task.scheduleDate)}${task.scheduleTime ? ` · ${task.scheduleTime}` : ""} · ${Number(task.scheduleRevealDays || 0) === 3 ? "מוצגת 3 ימים לפני" : Number(task.scheduleRevealDays || 0) === 1 ? "מוצגת יום לפני" : "מוצגת ביום עצמו"}`
-    : `החל מ־${formatCalendarDate(task.scheduleDate)}`;
+    : task.scheduleMode === "range"
+      ? `${formatCalendarDate(task.scheduleDate)} עד ${formatCalendarDate(task.scheduleEndDate)}`
+      : `החל מ־${formatCalendarDate(task.scheduleDate)}`;
   text.append(strong, meta);
 
   const actions = document.createElement("div");
@@ -944,7 +1018,7 @@ function createFutureRow(task) {
   showNow.className = "tiny-action";
   showNow.textContent = "להציג עכשיו";
   showNow.addEventListener("click", () => {
-    tasks = tasks.map(item => item.id === task.id ? { ...item, scheduleMode: "now", scheduleDate: null, scheduleTime: null, scheduleRevealDays: 0 } : item);
+    tasks = tasks.map(item => item.id === task.id ? { ...item, scheduleMode: "now", scheduleDate: null, scheduleEndDate: null, scheduleTime: null, scheduleRevealDays: 0 } : item);
     saveTasks();
     renderFutureList();
     renderTasks();
@@ -1050,10 +1124,11 @@ function importBackupFile(file) {
 function getSelectedSchedule() {
   const selected = taskForm.querySelector('input[name="scheduleMode"]:checked');
   const mode = selected ? selected.value : "now";
-  if (mode === "now") return { mode: "now", date: null, time: null, revealDays: 0 };
+  if (mode === "now") return { mode: "now", date: null, endDate: null, time: null, revealDays: 0 };
   return {
     mode,
     date: scheduleDate.value || null,
+    endDate: mode === "range" ? (scheduleEndDate.value || null) : null,
     time: mode === "exact" ? (scheduleTime.value || null) : null,
     revealDays: mode === "exact" ? Number(taskForm.querySelector('input[name="scheduleReveal"]:checked')?.value || 0) : 0
   };
@@ -1064,6 +1139,7 @@ function setSelectedSchedule(task = null) {
   const input = taskForm.querySelector(`input[name="scheduleMode"][value="${mode}"]`) || taskForm.querySelector('input[name="scheduleMode"][value="now"]');
   if (input) input.checked = true;
   scheduleDate.value = task?.scheduleDate || "";
+  if (scheduleEndDate) scheduleEndDate.value = task?.scheduleEndDate || "";
   scheduleTime.value = task?.scheduleTime || "";
   const revealValue = String(task?.scheduleRevealDays ?? 0);
   const revealInput = taskForm.querySelector(`input[name="scheduleReveal"][value="${revealValue}"]`) || taskForm.querySelector('input[name="scheduleReveal"][value="0"]');
@@ -1076,10 +1152,13 @@ function updateScheduleVisibility() {
   const mode = selected ? selected.value : "now";
   const scheduled = !isShoppingMode() && mode !== "now";
   scheduleDateWrap.hidden = !scheduled;
+  if (scheduleEndDateWrap) scheduleEndDateWrap.hidden = !(!isShoppingMode() && mode === "range");
   scheduleTimeWrap.hidden = !(!isShoppingMode() && mode === "exact");
   scheduleRevealWrap.hidden = !(!isShoppingMode() && mode === "exact");
   scheduleDate.required = scheduled;
+  if (scheduleEndDate) scheduleEndDate.required = !isShoppingMode() && mode === "range";
   if (mode !== "exact") scheduleTime.value = "";
+  if (mode !== "range" && scheduleEndDate) scheduleEndDate.value = "";
 }
 
 function createShoppingItemsFromText(text) {
@@ -1154,6 +1233,7 @@ function resetViewMoveControls(task = null) {
   const revealInput = viewTaskDialog.querySelector('input[name="viewMoveReveal"][value="0"]');
   if (revealInput) revealInput.checked = true;
   if (viewMoveDate) viewMoveDate.value = tomorrowKey();
+  if (viewMoveEndDate) viewMoveEndDate.value = "";
   if (viewMoveTime) viewMoveTime.value = "";
   updateViewMoveVisibility();
 }
@@ -1162,15 +1242,18 @@ function updateViewMoveVisibility() {
   if (!viewMovePanel || viewMovePanel.hidden) return;
   const selected = viewTaskDialog.querySelector('input[name="viewMoveMode"]:checked');
   const mode = selected ? selected.value : "tomorrow";
-  const needsDate = mode === "exact" || mode === "from";
+  const needsDate = mode === "exact" || mode === "from" || mode === "range";
   viewMoveDateWrap.hidden = !needsDate;
+  if (viewMoveEndDateWrap) viewMoveEndDateWrap.hidden = mode !== "range";
   viewMoveTimeWrap.hidden = mode !== "exact";
   viewMoveRevealWrap.hidden = mode !== "exact";
   if (mode === "tomorrow") {
     viewMoveDate.value = tomorrowKey();
+    if (viewMoveEndDate) viewMoveEndDate.value = "";
     viewMoveTime.value = "";
   }
-  if (mode === "from") viewMoveTime.value = "";
+  if (mode === "from" || mode === "range") viewMoveTime.value = "";
+  if (mode !== "range" && viewMoveEndDate) viewMoveEndDate.value = "";
 }
 
 function openViewTaskDialog(task) {
@@ -1223,14 +1306,19 @@ function applyViewMove() {
   const picked = selected ? selected.value : "tomorrow";
   const mode = picked === "tomorrow" ? "from" : picked;
   const date = picked === "tomorrow" ? tomorrowKey() : (viewMoveDate.value || "");
+  const endDate = mode === "range" ? (viewMoveEndDate?.value || "") : null;
   const time = mode === "exact" ? (viewMoveTime.value || null) : null;
   const revealDays = mode === "exact" ? Number(viewTaskDialog.querySelector('input[name="viewMoveReveal"]:checked')?.value || 0) : 0;
   if (!date) {
     viewMoveDate.focus();
     return;
   }
+  if (mode === "range" && (!endDate || compareDateKeys(endDate, date) < 0)) {
+    viewMoveEndDate.focus();
+    return;
+  }
   saveViewTaskText();
-  const moved = moveTaskToSchedule(viewingTaskId, mode, date, time, revealDays);
+  const moved = moveTaskToSchedule(viewingTaskId, mode, date, time, revealDays, endDate);
   if (moved) closeViewTaskDialog();
 }
 
@@ -1485,15 +1573,52 @@ function createHeadNoteRow({ labelText, text, onOpen, onClear, clearText = "×",
   return row;
 }
 
+function getActiveRangeTasks() {
+  return tasks
+    .filter(isActiveRangeTask)
+    .sort((a, b) => compareDateKeys(a.scheduleEndDate, b.scheduleEndDate));
+}
+
+function createActiveRangeNote(task) {
+  const progress = getRangeProgress(task);
+  const row = document.createElement("div");
+  row.className = "head-note-row range-note-row";
+
+  const label = document.createElement("span");
+  label.textContent = "עכשיו קורה";
+
+  const content = document.createElement("button");
+  content.type = "button";
+  content.className = "head-note-button range-note-button";
+  content.addEventListener("click", () => openViewTaskDialog(task));
+  content.innerHTML = `<strong>${task.text}</strong><small>${formatDateRange(task)}</small>`;
+
+  const barWrap = document.createElement("div");
+  barWrap.className = "range-progress-wrap";
+  const bar = document.createElement("span");
+  bar.className = "range-progress-bar";
+  bar.style.width = `${progress?.percent || 0}%`;
+  barWrap.appendChild(bar);
+
+  const progressText = document.createElement("em");
+  progressText.textContent = progress ? `יום ${progress.current} מתוך ${progress.total}` : "";
+
+  row.append(label, content, barWrap, progressText);
+  return row;
+}
+
 function renderHeadNote() {
   if (!headNote) return;
   headNote.innerHTML = "";
 
+  const activeRanges = getActiveRangeTasks();
   const headTask = getHeadTask();
   const urgentShoppingItem = getUrgentShoppingItem();
-  const show = !isShoppingMode() && (headTask || urgentShoppingItem);
+  const show = !isShoppingMode() && (activeRanges.length || headTask || urgentShoppingItem);
   headNote.hidden = !show;
   if (!show) return;
+
+  activeRanges.forEach(task => headNote.appendChild(createActiveRangeNote(task)));
 
   if (headTask) {
     headNote.appendChild(createHeadNoteRow({
@@ -1533,12 +1658,13 @@ function renderTasks() {
 
   renderHeadNote();
 
-  let openItems = items.filter(item => !item.done);
+  const activeRanges = shopping ? [] : items.filter(isActiveRangeTask);
+  let openItems = items.filter(item => !item.done && !isActiveRangeTask(item));
   if (shopping) {
     openItems = [...openItems].sort((a, b) => Number(Boolean(b.onHead)) - Number(Boolean(a.onHead)));
   }
   const doneItems = items.filter(item => item.done);
-  emptyState.hidden = openItems.length > 0 || doneItems.length > 0;
+  emptyState.hidden = openItems.length > 0 || doneItems.length > 0 || activeRanges.length > 0;
 
   openItems.forEach(task => taskList.appendChild(createTaskRow(task)));
 
@@ -1691,6 +1817,10 @@ taskForm.addEventListener("submit", event => {
   const schedule = isShoppingMode() ? null : getSelectedSchedule();
   if (schedule && schedule.mode !== "now" && !schedule.date) {
     scheduleDate.focus();
+    return;
+  }
+  if (schedule && schedule.mode === "range" && (!schedule.endDate || compareDateKeys(schedule.endDate, schedule.date) < 0)) {
+    scheduleEndDate.focus();
     return;
   }
 
