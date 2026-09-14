@@ -63,6 +63,7 @@ const hairWashDialog = document.getElementById("hairWashDialog");
 const hairWashYes = document.getElementById("hairWashYes");
 const hairWashNo = document.getElementById("hairWashNo");
 const hairWashLater = document.getElementById("hairWashLater");
+const calendarTodayButton = document.getElementById("calendarTodayButton");
 
 const recurringButton = document.getElementById("recurringButton");
 const recurringDialog = document.getElementById("recurringDialog");
@@ -926,6 +927,24 @@ function renderFutureCalendar() {
     if (key) taskCounts[key] = (taskCounts[key] || 0) + 1;
   });
 
+  // Keep a clear selected-day state. On the current month, default to today;
+  // on other months, prefer the first dated item and otherwise the first day.
+  const selectedDate = dateFromKey(selectedCalendarDate);
+  const selectionIsInMonth = selectedDate && selectedDate.getFullYear() === year && selectedDate.getMonth() === month;
+  if (!selectionIsInMonth) {
+    const todayDate = dateFromKey(today);
+    const isCurrentMonth = todayDate && todayDate.getFullYear() === year && todayDate.getMonth() === month;
+    if (isCurrentMonth) {
+      selectedCalendarDate = today;
+    } else {
+      const keysInMonth = Object.keys(taskCounts).filter(key => {
+        const d = dateFromKey(key);
+        return d && d.getFullYear() === year && d.getMonth() === month;
+      }).sort();
+      selectedCalendarDate = keysInMonth[0] || keyFromDate(new Date(year, month, 1));
+    }
+  }
+
   for (let i = 0; i < firstDay.getDay(); i += 1) {
     const blank = document.createElement("span");
     blank.className = "calendar-day blank";
@@ -942,6 +961,7 @@ function renderFutureCalendar() {
     if (rangeDays[key]) button.classList.add("has-range");
     if (selectedCalendarDate === key) button.classList.add("selected");
     if (taskCounts[key]) button.classList.add("has-items");
+    button.setAttribute("aria-pressed", selectedCalendarDate === key ? "true" : "false");
     button.innerHTML = `${key === today ? '<small class="calendar-today-label">היום</small>' : ''}<span>${day}</span>${taskCounts[key] ? `<em>${taskCounts[key]}</em>` : ""}`;
     button.addEventListener("click", () => {
       selectedCalendarDate = key;
@@ -950,17 +970,8 @@ function renderFutureCalendar() {
     futureCalendarGrid.appendChild(button);
   }
 
-  if (!selectedCalendarDate || dateFromKey(selectedCalendarDate)?.getMonth() !== month || dateFromKey(selectedCalendarDate)?.getFullYear() !== year) {
-    const keysInMonth = Object.keys(taskCounts).filter(key => {
-      const d = dateFromKey(key);
-      return d && d.getFullYear() === year && d.getMonth() === month;
-    }).sort();
-    selectedCalendarDate = keysInMonth[0] || keyFromDate(new Date(year, month, Math.min(new Date().getDate(), lastDay.getDate())));
-  }
-
   renderFutureCalendarDayList();
 }
-
 function renderFutureCalendarDayList() {
   futureCalendarDayList.innerHTML = "";
   const heading = document.createElement("h3");
@@ -1819,6 +1830,12 @@ calendarPrevButton.addEventListener("click", () => {
 calendarNextButton.addEventListener("click", () => {
   calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 1);
   selectedCalendarDate = null;
+  renderFutureCalendar();
+});
+if (calendarTodayButton) calendarTodayButton.addEventListener("click", () => {
+  const now = new Date();
+  calendarCursor = new Date(now.getFullYear(), now.getMonth(), 1);
+  selectedCalendarDate = todayKey();
   renderFutureCalendar();
 });
 if (viewMoveToggle) viewMoveToggle.addEventListener("click", () => {

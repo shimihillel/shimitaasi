@@ -2772,3 +2772,92 @@ body.shopping-mode .task-row.shopping-priority {
 .future-card .icon-close {
   color: #d9708e;
 }
+
+
+/* v26.5 · selected calendar day + return-to-today control */
+.future-card .calendar-title-group {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.future-card .calendar-today-button {
+  min-height: 31px;
+  padding: 5px 10px;
+  border: 1.2px solid rgba(184, 154, 72, .24);
+  border-radius: 999px;
+  background: rgba(255, 248, 219, .72);
+  color: rgba(43, 38, 33, .72);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  box-shadow: 0 2px 7px rgba(43, 38, 33, .03);
+}
+
+.future-card .calendar-today-button:active {
+  transform: scale(.97);
+}
+
+.future-card .calendar-weekdays,
+.future-card .future-calendar-grid {
+  column-gap: 6px;
+  row-gap: 8px;
+}
+
+.future-card .calendar-day {
+  min-height: 44px;
+}
+
+/* Selected day is intentionally quieter than the real current day. */
+.future-card .calendar-day.selected:not(.today) {
+  position: relative;
+  transform: none;
+  border: 1.8px solid rgba(214, 166, 41, .92) !important;
+  box-shadow: 0 3px 0 rgba(169, 126, 21, .10), 0 6px 14px rgba(169, 126, 21, .05) !important;
+}
+
+.future-card .calendar-day.selected:not(.today)::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 20px;
+  height: 2.5px;
+  border-radius: 999px;
+  background: rgba(157, 126, 48, .58);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* If today itself is selected, keep the pink identity and add only a tiny selection underline. */
+.future-card .calendar-day.today.selected::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 20px;
+  height: 2.5px;
+  border-radius: 999px;
+  background: rgba(184, 69, 102, .62);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.future-card .calendar-day.today.selected {
+  transform: none;
+}
+
+@media (max-width: 390px) {
+  .future-card .calendar-title-group { gap: 6px; }
+  .future-card .calendar-today-button { padding-inline: 8px; font-size: 10.5px; }
+  .future-card .calendar-weekdays,
+  .future-card .future-calendar-grid { column-gap: 5px; row-gap: 7px; }
+}

@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v26.4-calendar-polish -->
+  <!-- app-version: v26.5-calendar-selection -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=26.4" />
+  <link rel="stylesheet" href="style.css?v=26.5" />
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
@@ -255,7 +255,10 @@
       <div id="futureCalendarPanel" class="future-calendar-panel" hidden>
         <div class="calendar-header">
           <button id="calendarPrevButton" class="calendar-nav" type="button" aria-label="חודש קודם">‹</button>
-          <strong id="calendarMonthLabel"></strong>
+          <div class="calendar-title-group">
+            <strong id="calendarMonthLabel"></strong>
+            <button id="calendarTodayButton" class="calendar-today-button" type="button" aria-label="חזרה להיום">היום <span aria-hidden="true">◎</span></button>
+          </div>
           <button id="calendarNextButton" class="calendar-nav" type="button" aria-label="חודש הבא">›</button>
         </div>
         <div class="calendar-weekdays" aria-hidden="true">
@@ -280,6 +283,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=26.4"></script>
+  <script src="app.js?v=26.5"></script>
 </body>
 </html>
