@@ -942,7 +942,7 @@ function renderFutureCalendar() {
     if (rangeDays[key]) button.classList.add("has-range");
     if (selectedCalendarDate === key) button.classList.add("selected");
     if (taskCounts[key]) button.classList.add("has-items");
-    button.innerHTML = `<span>${day}</span>${taskCounts[key] ? `<em>${taskCounts[key]}</em>` : ""}`;
+    button.innerHTML = `${key === today ? '<small class="calendar-today-label">היום</small>' : ''}<span>${day}</span>${taskCounts[key] ? `<em>${taskCounts[key]}</em>` : ""}`;
     button.addEventListener("click", () => {
       selectedCalendarDate = key;
       renderFutureCalendar();
