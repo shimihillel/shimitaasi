@@ -974,9 +974,30 @@ function renderFutureCalendar() {
 }
 function renderFutureCalendarDayList() {
   futureCalendarDayList.innerHTML = "";
+  const headingRow = document.createElement("div");
+  headingRow.className = "calendar-day-heading-row";
+
   const heading = document.createElement("h3");
   heading.textContent = formatCalendarDate(selectedCalendarDate, true);
-  futureCalendarDayList.appendChild(heading);
+  headingRow.appendChild(heading);
+
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.className = "calendar-add-task-button";
+  addButton.textContent = "+ מטלה ליום הזה";
+  addButton.setAttribute("aria-label", `הוספת מטלה ל-${formatCalendarDate(selectedCalendarDate, true)}`);
+  addButton.addEventListener("click", () => {
+    openTaskDialog("add");
+    setSelectedSchedule({
+      scheduleMode: "exact",
+      scheduleDate: selectedCalendarDate,
+      scheduleTime: "",
+      scheduleRevealDays: 0
+    });
+  });
+  headingRow.appendChild(addButton);
+  futureCalendarDayList.appendChild(headingRow);
+
   const items = getFutureTasksForDate(selectedCalendarDate);
   if (!items.length) {
     const empty = document.createElement("p");
@@ -1881,6 +1902,7 @@ taskForm.addEventListener("submit", event => {
     setTimeout(() => taskInput.focus(), 30);
   } else {
     closeTaskDialog();
+    if (futureDialog.open && futureViewMode === "calendar") renderFutureCalendar();
   }
 });
 

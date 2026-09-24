@@ -2861,3 +2861,52 @@ body.shopping-mode .task-row.shopping-priority {
   .future-card .calendar-weekdays,
   .future-card .future-calendar-grid { column-gap: 5px; row-gap: 7px; }
 }
+
+
+/* v26.6 · add a dated task directly from the calendar */
+.future-card .calendar-day-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  direction: rtl;
+}
+
+.future-card .calendar-day-heading-row h3 {
+  min-width: 0;
+  margin: 0;
+}
+
+.future-card .calendar-add-task-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 6px 11px 7px;
+  border: 1.4px solid rgba(43,38,33,.23);
+  border-radius: 999px;
+  background: rgba(255, 240, 168, .82);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(43,38,33,.09);
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.future-card .calendar-add-task-button:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+@media (max-width: 390px) {
+  .future-card .calendar-day-heading-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .future-card .calendar-add-task-button {
+    align-self: stretch;
+  }
+}
