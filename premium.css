@@ -1148,3 +1148,30 @@ input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-dat
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+
+/* V27.1 — tighter task rhythm; existing 44px touch targets stay unchanged.
+   No fixed/max row heights: dates, badges and long text keep their own space. */
+body.soft-premium:not(.shopping-mode) .task-row {
+  min-height: 88px;
+  padding-block: 0;
+}
+body.soft-premium:not(.shopping-mode) .task-row .task-meta {
+  padding-block: 0;
+  row-gap: 3px;
+}
+body.soft-premium:not(.shopping-mode) .task-row.rosemary-task {
+  margin-block: 2px;
+  padding-block: 2px;
+}
+body.soft-premium.shopping-mode .task-row {
+  min-height: 50px;
+  padding-block: 3px;
+}
+
+/* The calendar alone handles horizontal swipes. Vertical page scrolling
+   and pinch-to-zoom remain native. No touch-action restrictions elsewhere. */
+#futureCalendarGrid,
+#futureCalendarGrid .calendar-day {
+  touch-action: pan-y pinch-zoom;
+}

@@ -8,12 +8,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v27-soft-premium -->
+  <!-- app-version: v27.1-compact-calendar -->
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=27" />
-  <link rel="stylesheet" href="premium.css?v=27" />
+  <link rel="stylesheet" href="style.css?v=27.1" />
+  <link rel="stylesheet" href="premium.css?v=27.1" />
 </head>
 <body class="soft-premium">
   <main class="app-shell" aria-live="polite">
@@ -33,7 +33,7 @@
         </div>
         <div class="header-actions refreshed-panel">
           <button id="recurringButton" class="sort-toggle mini" type="button">קבועות</button>
-          <button id="futureButton" class="sort-toggle mini" type="button">עתידיות</button>
+          <button id="futureButton" class="sort-toggle mini" type="button">יומן</button>
           <button id="sortModeButton" class="sort-toggle mini" type="button" aria-pressed="false">סדרי לי</button>
           <button id="backupButton" class="sort-toggle mini" type="button">גיבוי</button>
         </div>
@@ -246,9 +246,9 @@
   <dialog id="futureDialog" class="dialog future-dialog">
     <div class="dialog-card future-card">
       <button class="icon-close" id="closeFutureButton" type="button" aria-label="סגירה">×</button>
-      <h2><mark>עתידיות</mark></h2>
-      <p class="backup-copy">דברים שכבר כתבת, אבל ביקשת שלא יציקו לפני הזמן.</p>
-      <div class="future-view-switch" role="group" aria-label="בחירת תצוגת עתידיות">
+      <h2><mark>יומן</mark></h2>
+      <p class="backup-copy">כל מה שקבעת, במקום אחד.</p>
+      <div class="future-view-switch" role="group" aria-label="בחירת תצוגת יומן">
         <button id="futureCalendarViewButton" class="view-toggle active" type="button">יומן</button>
         <button id="futureListViewButton" class="view-toggle" type="button">רשימה</button>
       </div>
@@ -284,6 +284,7 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=27"></script>
+  <script src="app.js?v=27.1"></script>
+  <script src="calendar-swipe.js?v=27.1"></script>
 </body>
 </html>
