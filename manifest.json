@@ -4,8 +4,8 @@
   "description": "מחברת מטלות קטנה לשימי",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#fff8e9",
-  "theme_color": "#fff2cd",
+  "background_color": "#fbf7f0",
+  "theme_color": "#fbf7f0",
   "dir": "rtl",
   "lang": "he",
   "icons": [
