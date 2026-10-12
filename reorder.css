@@ -1,0 +1,18 @@
+.task-row.sorting .task-actions,
+body.shopping-mode .task-row.sorting .task-actions {
+  grid-column: 3; grid-row: 1; align-self: center; justify-self: end;
+}
+.task-row.sorting,
+body.shopping-mode .task-row.sorting { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+.task-row.sorting .task-title-line { grid-column: 2; }
+.task-row.sorting .task-meta { grid-column: 2; }
+.reorder-handle {
+  width: 44px; height: 48px; border: 1px solid #cfc2d9; border-radius: 12px;
+  color: #594068; background: #f2eaf7; font: inherit; font-size: 29px;
+  cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.reorder-handle:focus-visible { outline: 3px solid #734584; outline-offset: 3px; }
+.reorder-handle:hover { background: #e8daef; }
+.task-row.is-dragging { outline: 2px solid #734584; background: #f0e7f6; box-shadow: 0 6px 18px #59406824; }
+.task-drag-active, .task-drag-active * { cursor: grabbing; user-select: none; }
+.sort-mode .sort-hint { color: #594068; }

@@ -1422,6 +1422,7 @@ function closeDeleteRecurringDialog() {
 
 function createTaskRow(task) {
   const row = document.createElement("article");
+  row.dataset.taskId = task.id;
   row.className = `task-row${task.done ? " done" : ""}${task.specialType === "rosemary" ? " rosemary-task" : ""}${task.onHead && !task.done && isShoppingMode() ? " shopping-priority" : ""}`;
 
   const checkButton = document.createElement("button");
@@ -1513,70 +1514,23 @@ function createTaskRow(task) {
   } else if (sortMode) {
     row.classList.add("sorting");
 
-    const openItems = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item)));
-    const openTasksCount = openItems.length;
-    const openIndex = openItems.findIndex(item => item.id === task.id);
-
-    const topButton = document.createElement("button");
-    topButton.className = "action-button move top";
-    topButton.type = "button";
-    topButton.textContent = "⇈";
-    topButton.setAttribute("aria-label", "הקפיצי מטלה לראש הרשימה");
-    topButton.title = "הקפצה לראש";
-    topButton.disabled = task.done || openIndex === 0;
-    topButton.addEventListener("click", () => moveTaskToTop(task.id));
-
-    const upButton = document.createElement("button");
-    upButton.className = "action-button move up";
-    upButton.type = "button";
-    upButton.textContent = "↑";
-    upButton.setAttribute("aria-label", "העלי מטלה מקום אחד");
-    upButton.title = "לעלות מקום";
-    upButton.disabled = task.done || openIndex === 0;
-    upButton.addEventListener("click", () => moveTaskBy(task.id, -1));
-
-    const downButton = document.createElement("button");
-    downButton.className = "action-button move down";
-    downButton.type = "button";
-    downButton.textContent = "↓";
-    downButton.setAttribute("aria-label", "הורידי מטלה מקום אחד");
-    downButton.title = "להוריד מקום";
-    downButton.disabled = task.done || openIndex === openTasksCount - 1;
-    downButton.addEventListener("click", () => moveTaskBy(task.id, 1));
-
-    const bottomButton = document.createElement("button");
-    bottomButton.className = "action-button move bottom";
-    bottomButton.type = "button";
-    bottomButton.textContent = "⇊";
-    bottomButton.setAttribute("aria-label", "הורידי מטלה לסוף הרשימה");
-    bottomButton.title = "הורדה לסוף";
-    bottomButton.disabled = task.done || openIndex === openTasksCount - 1;
-    bottomButton.addEventListener("click", () => moveTaskToBottom(task.id));
-
-    actions.append(topButton, upButton, downButton, bottomButton);
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "reorder-handle";
+    handle.textContent = "⠿";
+    handle.setAttribute("aria-label", `גרירת ${task.text} לסידור; במקלדת השתמשי בחצים`);
+    handle.title = "גררי למקום הרצוי";
+    handle.addEventListener("pointerdown", event => startTaskDrag(event, row, handle));
+    handle.addEventListener("keydown", event => {
+      if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      if (event.key === "Home") moveTaskToTop(task.id);
+      else if (event.key === "End") moveTaskToBottom(task.id);
+      else moveTaskBy(task.id, event.key === "ArrowUp" ? -1 : 1);
+      document.querySelector(`[data-task-id="${CSS.escape(task.id)}"] .reorder-handle`)?.focus();
+    });
+    actions.append(handle);
   } else {
-    const openItems = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item)));
-    const openIndex = openItems.findIndex(item => item.id === task.id);
-    const openCount = openItems.length;
-
-    const upButton = document.createElement("button");
-    upButton.className = "action-button move up";
-    upButton.type = "button";
-    upButton.textContent = "↑";
-    upButton.setAttribute("aria-label", "העלי מטלה מקום אחד");
-    upButton.title = "לעלות מקום";
-    upButton.disabled = task.done || openIndex === 0;
-    upButton.addEventListener("click", () => moveTaskBy(task.id, -1));
-
-    const downButton = document.createElement("button");
-    downButton.className = "action-button move down";
-    downButton.type = "button";
-    downButton.textContent = "↓";
-    downButton.setAttribute("aria-label", "הורידי מטלה מקום אחד");
-    downButton.title = "להוריד מקום";
-    downButton.disabled = task.done || openIndex === openCount - 1;
-    downButton.addEventListener("click", () => moveTaskBy(task.id, 1));
-
     const tomorrowButton = document.createElement("button");
     tomorrowButton.className = "action-button tomorrow";
     tomorrowButton.type = "button";
@@ -1586,7 +1540,7 @@ function createTaskRow(task) {
     tomorrowButton.hidden = isShoppingMode() || task.done;
     tomorrowButton.addEventListener("click", () => postponeTaskToTomorrow(task.id));
 
-    actions.append(upButton, downButton, tomorrowButton);
+    actions.append(tomorrowButton);
   }
 
   row.append(checkButton, textWrap, actions);
