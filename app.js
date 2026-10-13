@@ -1531,6 +1531,28 @@ function createTaskRow(task) {
     });
     actions.append(handle);
   } else {
+    const openItems = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item)));
+    const openIndex = openItems.findIndex(item => item.id === task.id);
+    const openCount = openItems.length;
+
+    const upButton = document.createElement("button");
+    upButton.className = "action-button move up";
+    upButton.type = "button";
+    upButton.textContent = "↑";
+    upButton.setAttribute("aria-label", "העלי מטלה מקום אחד");
+    upButton.title = "לעלות מקום";
+    upButton.disabled = task.done || openIndex === 0;
+    upButton.addEventListener("click", () => moveTaskBy(task.id, -1));
+
+    const downButton = document.createElement("button");
+    downButton.className = "action-button move down";
+    downButton.type = "button";
+    downButton.textContent = "↓";
+    downButton.setAttribute("aria-label", "הורידי מטלה מקום אחד");
+    downButton.title = "להוריד מקום";
+    downButton.disabled = task.done || openIndex === openCount - 1;
+    downButton.addEventListener("click", () => moveTaskBy(task.id, 1));
+
     const tomorrowButton = document.createElement("button");
     tomorrowButton.className = "action-button tomorrow";
     tomorrowButton.type = "button";
@@ -1540,7 +1562,7 @@ function createTaskRow(task) {
     tomorrowButton.hidden = isShoppingMode() || task.done;
     tomorrowButton.addEventListener("click", () => postponeTaskToTomorrow(task.id));
 
-    actions.append(tomorrowButton);
+    actions.append(upButton, downButton, tomorrowButton);
   }
 
   row.append(checkButton, textWrap, actions);
