@@ -941,7 +941,7 @@ input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-dat
 .weekday-picker { gap: 5px; }
 .weekday-picker label span { min-height: 44px; border-radius: 11px; background: #fffdfa; border: 1px solid #e6ded2; box-shadow: none; font-size: 13px; }
 .weekday-picker input:checked + span { border-color: #bdb090; background: #f7e9ba; color: #72592e; }
-.recurring-add { margin-top: 15px; }
+.recurring-add { margin: 0 0 15px; }
 .recurring-empty { color: #8b7d6c; font-size: 14px; font-weight: 400; padding: 20px 0; text-align: center; }
 .inline-error { color: #a45769; font-size: 12px; }
 
