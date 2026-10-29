@@ -459,10 +459,42 @@ function deleteTask(id) {
   renderTasks();
 }
 
+function getTaskOrderGroup(task) {
+  if (isShoppingMode()) return task.onHead ? 0 : 1;
+  // Early reminders stay below today's tasks, including the evening anchor.
+  if (getCountdownLabel(task)) return 4;
+
+  const title = String(task.text || "").normalize("NFKC")
+    .replace(/[\u0591-\u05c7]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+  if (/^כדור מדכא(?:\s|$)/.test(title)) return 0;
+  const words = title.split(" ");
+  const ronEyeDrops = words.includes("רון") && words.includes("טיפות") &&
+    (words.includes("עיניים") || words.includes("עינים"));
+  if (ronEyeDrops && words.includes("בוקר")) return 1;
+  if (ronEyeDrops && words.includes("ערב")) return 3;
+  return 2;
+}
+
+function sortOpenItems(items) {
+  // Stable within each group, preserving the user's manual order.
+  return [...items].sort((a, b) => getTaskOrderGroup(a) - getTaskOrderGroup(b));
+}
+
+function getOpenTaskRows() {
+  return sortOpenItems(currentItems().filter(item => !item.done &&
+    (isShoppingMode() || (isTaskVisibleNow(item) && !isActiveRangeTask(item)))));
+}
+
+function getTaskSortPeers(task) {
+  const group = getTaskOrderGroup(task);
+  return getOpenTaskRows().filter(item => getTaskOrderGroup(item) === group);
+}
+
 function splitItemsForSorting() {
   const items = currentItems();
-  const visibleOpen = items.filter(entry => !entry.done && (isShoppingMode() || isTaskVisibleNow(entry)));
-  const hiddenFuture = isShoppingMode() ? [] : items.filter(entry => !entry.done && !isTaskVisibleNow(entry));
+  const visibleOpen = getOpenTaskRows();
+  const hiddenFuture = isShoppingMode() ? [] : items.filter(entry => !entry.done && (!isTaskVisibleNow(entry) || isActiveRangeTask(entry)));
   const doneItems = items.filter(entry => entry.done);
   return { visibleOpen, hiddenFuture, doneItems };
 }
@@ -477,10 +509,11 @@ function moveTaskToTop(id) {
 
   const { visibleOpen, hiddenFuture, doneItems } = splitItemsForSorting();
   const index = visibleOpen.findIndex(entry => entry.id === id);
-  if (index <= 0) return;
+  const targetIndex = visibleOpen.findIndex(entry => getTaskOrderGroup(entry) === getTaskOrderGroup(item));
+  if (index < 0 || index === targetIndex) return;
 
   const [movedItem] = visibleOpen.splice(index, 1);
-  visibleOpen.unshift(movedItem);
+  visibleOpen.splice(targetIndex, 0, movedItem);
   saveSortedVisibleItems(visibleOpen, hiddenFuture, doneItems);
   renderTasks();
 }
@@ -491,10 +524,12 @@ function moveTaskToBottom(id) {
 
   const { visibleOpen, hiddenFuture, doneItems } = splitItemsForSorting();
   const index = visibleOpen.findIndex(entry => entry.id === id);
-  if (index < 0 || index === visibleOpen.length - 1) return;
+  const lastPeer = getTaskSortPeers(item).at(-1);
+  const targetIndex = visibleOpen.findIndex(entry => entry.id === lastPeer?.id);
+  if (index < 0 || index === targetIndex) return;
 
   const [movedItem] = visibleOpen.splice(index, 1);
-  visibleOpen.push(movedItem);
+  visibleOpen.splice(targetIndex, 0, movedItem);
   saveSortedVisibleItems(visibleOpen, hiddenFuture, doneItems);
   renderTasks();
 }
@@ -507,6 +542,7 @@ function moveTaskBy(id, direction) {
   const index = visibleOpen.findIndex(entry => entry.id === id);
   const targetIndex = index + direction;
   if (index < 0 || targetIndex < 0 || targetIndex >= visibleOpen.length) return;
+  if (getTaskOrderGroup(visibleOpen[targetIndex]) !== getTaskOrderGroup(item)) return;
 
   const [movedItem] = visibleOpen.splice(index, 1);
   visibleOpen.splice(targetIndex, 0, movedItem);
@@ -516,10 +552,7 @@ function moveTaskBy(id, direction) {
 
 function getVisibleTasks() {
   const items = currentItems();
-  let openItems = items.filter(item => !item.done);
-  if (isShoppingMode()) {
-    openItems = [...openItems].sort((a, b) => Number(Boolean(b.onHead)) - Number(Boolean(a.onHead)));
-  }
+  const openItems = sortOpenItems(items.filter(item => !item.done));
   const doneItems = items.filter(item => item.done);
   return [...openItems, ...doneItems];
 }
@@ -1513,6 +1546,7 @@ function createTaskRow(task) {
     actions.appendChild(undoButton);
   } else if (sortMode) {
     row.classList.add("sorting");
+    row.dataset.sortGroup = String(getTaskOrderGroup(task));
 
     const handle = document.createElement("button");
     handle.type = "button";
@@ -1520,6 +1554,11 @@ function createTaskRow(task) {
     handle.textContent = "⠿";
     handle.setAttribute("aria-label", `גרירת ${task.text} לסידור; במקלדת השתמשי בחצים`);
     handle.title = "גררי למקום הרצוי";
+    handle.disabled = getTaskSortPeers(task).length < 2;
+    if (handle.disabled) {
+      handle.title = "המיקום ברשימה קבוע";
+      handle.setAttribute("aria-label", `${task.text} — מיקום קבוע ברשימה`);
+    }
     handle.addEventListener("pointerdown", event => startTaskDrag(event, row, handle));
     handle.addEventListener("keydown", event => {
       if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
@@ -1531,7 +1570,7 @@ function createTaskRow(task) {
     });
     actions.append(handle);
   } else {
-    const openItems = currentItems().filter(item => !item.done && (isShoppingMode() || isTaskVisibleNow(item)));
+    const openItems = getTaskSortPeers(task);
     const openIndex = openItems.findIndex(item => item.id === task.id);
     const openCount = openItems.length;
 
@@ -1689,10 +1728,7 @@ function renderTasks() {
   renderHeadNote();
 
   const activeRanges = shopping ? [] : items.filter(isActiveRangeTask);
-  let openItems = items.filter(item => !item.done && !isActiveRangeTask(item));
-  if (shopping) {
-    openItems = [...openItems].sort((a, b) => Number(Boolean(b.onHead)) - Number(Boolean(a.onHead)));
-  }
+  const openItems = getOpenTaskRows();
   const doneItems = items.filter(item => item.done);
   emptyState.hidden = openItems.length > 0 || doneItems.length > 0 || activeRanges.length > 0;
 
@@ -1967,4 +2003,3 @@ window.addEventListener("keydown", event => {
 
 loadTasks();
 switchList("tasks");
-maybeOpenHairWashDialog();

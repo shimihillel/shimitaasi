@@ -1,6 +1,6 @@
 /* Pointer events support mouse, touch and pen without blocking normal scrolling. */
 function startTaskDrag(event, row, handle) {
-  if (event.button !== 0 || !sortMode) return;
+  if (event.button !== 0 || !sortMode || handle.disabled) return;
   event.preventDefault();
   const rows = () => [...taskList.querySelectorAll(':scope > .task-row.sorting')];
   if (rows().length < 2) return;
@@ -13,16 +13,10 @@ function startTaskDrag(event, row, handle) {
   row.classList.add('is-dragging');
   document.body.classList.add('task-drag-active');
   const reorderAtPointer = () => {
-    const targets = rows().filter(candidate => candidate !== row);
+    // Drag only among peers: daily anchors and early reminders keep their places.
+    const targets = rows().filter(candidate => candidate !== row && candidate.dataset.sortGroup === row.dataset.sortGroup);
     const target = targets.find(candidate => y < candidate.getBoundingClientRect().top + candidate.getBoundingClientRect().height / 2);
-    // Shopping priority stays pinned, matching the existing list behavior.
-    const group = row.classList.contains('shopping-priority');
-    if (isShoppingMode()) {
-      const peers = targets.filter(candidate => candidate.classList.contains('shopping-priority') === group);
-      const next = peers.find(candidate => y < candidate.getBoundingClientRect().top + candidate.getBoundingClientRect().height / 2);
-      if (next) taskList.insertBefore(row, next);
-      else if (peers.length) peers.at(-1).after(row);
-    } else if (target) taskList.insertBefore(row, target);
+    if (target) taskList.insertBefore(row, target);
     else if (targets.length) targets.at(-1).after(row);
   };
   const tick = () => {

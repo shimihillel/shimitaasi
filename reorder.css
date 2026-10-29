@@ -13,6 +13,7 @@ body.shopping-mode .task-row.sorting { grid-template-columns: 44px minmax(0, 1fr
 }
 .reorder-handle:focus-visible { outline: 3px solid #734584; outline-offset: 3px; }
 .reorder-handle:hover { background: #e8daef; }
+.reorder-handle:disabled { opacity: .35; cursor: default; }
 .task-row.is-dragging { outline: 2px solid #734584; background: #f0e7f6; box-shadow: 0 6px 18px #59406824; }
 .task-drag-active, .task-drag-active * { cursor: grabbing; user-select: none; }
 .sort-mode .sort-hint { color: #594068; }
