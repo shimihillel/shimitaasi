@@ -1,0 +1,24 @@
+/* Day view: the first card is the real task row, with the same controls as the list. */
+body:not(.shopping-mode) .app-header { padding-bottom: 0; }
+body:not(.shopping-mode) .app-header .tabs { margin-top: 13px; }
+#nextTask { margin: 15px 0 0; border-radius: 15px; border: 1.5px solid #75618b; background: #f1ebfa; color: var(--ink); }
+#nextLabel { margin: 0; padding: 11px 16px 0; font-family: inherit; font-size: 14px; line-height: 1.3; font-weight: 700; color: #5c4571; }
+body.soft-premium:not(.shopping-mode) #nextRow .task-row { min-height: 76px; padding: 0 6px 3px; border: 0; background: transparent !important; box-shadow: none; }
+#nextRow .task-text { font-size: 20px; line-height: 1.23; font-weight: 700; margin-top: 9px; }
+#nextRow .check-shape { border-color: #705586; }
+#nextRow .task-meta .task-date { color: #675c70; }
+#listTools { margin: 0 0 15px; }
+#listTools .header-actions { margin-top: 0; }
+#listTools .sort-hint { margin: 8px 0 0; }
+body:not(.shopping-mode) .list-progress { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; margin: 12px 0 15px; padding: 0 2px; }
+body:not(.shopping-mode) .progress-heading { gap: 8px; font-size: 13px; color: #5e5664; }
+body:not(.shopping-mode) #progressCount { font-size: 14px; font-weight: 650; color: var(--ink); }
+body:not(.shopping-mode) .progress-track { flex: 1 1 50px; min-width: 35px; height: 5px; background: #e7e0ec; border: 0; margin: 0; }
+body:not(.shopping-mode) #progressFill { background: #88759e; }
+body:not(.shopping-mode) .list-progress.is-complete #progressFill { background: #4b7b60; }
+body:not(.shopping-mode) .list-progress.is-complete #progressCount { color: #375d49; }
+body:not(.shopping-mode) .list-progress.no-tasks .progress-track { display: none; }
+body:not(.shopping-mode) #progressNote { flex-basis: 100%; font-size: 12px; margin: 0; color: #5d5264; }
+.shopping-tab-copy { display: grid; min-width: 0; text-align: start; }
+#urgentTabNote { display: block; max-width: 13ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 1.25; color: #395d49; }
+.later-label { margin: 10px 3px 0; color: #64566e; font-family: inherit; font-size: 14px; font-weight: 650; }

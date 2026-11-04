@@ -174,7 +174,9 @@ function daysBetweenKeys(fromKey, toKey) {
   const fromDate = dateFromKey(fromKey);
   const toDate = dateFromKey(toKey);
   if (!fromDate || !toDate) return Infinity;
-  return Math.floor((toDate - fromDate) / 86400000);
+  // Compare calendar days, even when a local day lasts 23 or 25 hours.
+  const utcDay = d => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return (utcDay(toDate) - utcDay(fromDate)) / 86400000;
 }
 
 function compareDateKeys(a, b) {
@@ -240,6 +242,11 @@ function isFutureTask(task) {
 function isTaskVisibleNow(task) {
   if (isRangeTask(task)) return isActiveRangeTask(task);
   return !isFutureTask(task);
+}
+
+function belongsToToday(task) {
+  return !isRangeTask(task) && isTaskVisibleNow(task) &&
+    !(task.scheduleMode === "exact" && task.scheduleDate > todayKey());
 }
 
 function getCountdownLabel(task) {
@@ -1676,20 +1683,26 @@ function createActiveRangeNote(task) {
   return row;
 }
 
-function renderHeadNote() {
+function renderHeadNote(nextTask) {
   if (!headNote) return;
   headNote.innerHTML = "";
 
   const activeRanges = getActiveRangeTasks();
   const headTask = getHeadTask();
   const urgentShoppingItem = getUrgentShoppingItem();
-  const show = !isShoppingMode() && (activeRanges.length || headTask || urgentShoppingItem);
+  const badge = document.getElementById("urgentTabNote");
+  badge.hidden = !urgentShoppingItem;
+  badge.textContent = urgentShoppingItem ? "דחוף: " + urgentShoppingItem.text : "";
+  shoppingTab.title = urgentShoppingItem ? "לקנות דחוף: " + urgentShoppingItem.text : "";
+  // A starred next task is already visible, with its star, in the first row.
+  const showHead = headTask && headTask.id !== nextTask?.id;
+  const show = !isShoppingMode() && (activeRanges.length || showHead);
   headNote.hidden = !show;
   if (!show) return;
 
   activeRanges.forEach(task => headNote.appendChild(createActiveRangeNote(task)));
 
-  if (headTask) {
+  if (showHead) {
     headNote.appendChild(createHeadNoteRow({
       labelText: "על הראש",
       text: headTask.text,
@@ -1700,17 +1713,7 @@ function renderHeadNote() {
     }));
   }
 
-  if (urgentShoppingItem) {
-    headNote.appendChild(createHeadNoteRow({
-      labelText: "לקנות דחוף",
-      text: urgentShoppingItem.text,
-      onOpen: () => switchList("shopping"),
-      onClear: () => switchList("shopping"),
-      clearText: "›",
-      clearLabel: "לעבור לקניות",
-      extraClass: "urgent-shopping-note"
-    }));
-  }
+
 }
 
 function renderTasks() {
@@ -1725,14 +1728,38 @@ function renderTasks() {
   emptyText.innerHTML = messages[dailyIndex(messages.length, shopping ? 17 : 4)];
   taskList.setAttribute("aria-label", shopping ? "רשימת קניות" : "רשימת מטלות");
 
-  renderHeadNote();
 
   const activeRanges = shopping ? [] : items.filter(isActiveRangeTask);
   const openItems = getOpenTaskRows();
   const doneItems = items.filter(item => item.done);
   emptyState.hidden = openItems.length > 0 || doneItems.length > 0 || activeRanges.length > 0;
 
-  openItems.forEach(task => taskList.appendChild(createTaskRow(task)));
+  const next = !shopping && !sortMode ? openItems.find(belongsToToday) : null;
+  const nextSlot = document.getElementById("nextTask");
+  const nextRow = document.getElementById("nextRow");
+  const restoreCheckFocus = nextRow.contains(document.activeElement) &&
+    document.activeElement.classList.contains("check-button");
+  nextSlot.hidden = !next;
+  nextRow.replaceChildren();
+  if (next) nextRow.appendChild(createTaskRow(next));
+  renderHeadNote(next);
+  updateListProgress(items);
+  if (restoreCheckFocus) {
+    (nextRow.querySelector(".check-button") || document.getElementById("progressCount")).focus({preventScroll:true});
+  }
+
+  let showedLaterLabel = false;
+  openItems.forEach(task => {
+    if (task.id === next?.id) return;
+    if (!shopping && !sortMode && !showedLaterLabel && !belongsToToday(task)) {
+      const title = document.createElement("h2");
+      title.className = "later-label";
+      title.textContent = "תזכורות להמשך";
+      taskList.appendChild(title);
+      showedLaterLabel = true;
+    }
+    taskList.appendChild(createTaskRow(task));
+  });
 
   if (doneItems.length > 0) {
     const doneBlock = document.createElement("section");
@@ -1832,7 +1859,12 @@ function switchList(nextList) {
   const shopping = isShoppingMode();
   document.body.classList.toggle("shopping-mode", shopping);
   appTitle.textContent = shopping ? "שימי, תקני" : "שימי, תעשי";
-  appSubtitle.textContent = shopping ? "מה חסר?" : "מה עכשיו?";
+  appSubtitle.hidden = !shopping;
+  appSubtitle.textContent = shopping ? "מה חסר?" : "";
+  const listTools = document.getElementById("listTools");
+  const progress = document.querySelector(".list-progress");
+  if (shopping) listTools.after(progress);
+  else listTools.before(progress);
   tasksTab.classList.toggle("active", !shopping);
   shoppingTab.classList.toggle("active", shopping);
   tasksTab.setAttribute("aria-selected", String(!shopping));
@@ -2003,3 +2035,22 @@ window.addEventListener("keydown", event => {
 
 loadTasks();
 switchList("tasks");
+
+// Keep an open tab accurate when a reminder becomes due overnight.
+let renderedDay = todayKey();
+function refreshDay() {
+  if (renderedDay === todayKey()) return;
+  renderedDay = todayKey();
+  // Reload persisted lists so an overnight tab does not overwrite edits from another tab.
+  loadTasks();
+  renderTasks();
+  if (futureDialog.open) renderFutureList();
+}
+function scheduleNewDay() {
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 50);
+  setTimeout(() => { refreshDay(); scheduleNewDay(); }, midnight.getTime() - Date.now());
+}
+scheduleNewDay();
+window.addEventListener("pageshow", refreshDay);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshDay(); });

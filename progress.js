@@ -1,29 +1,34 @@
-/* Read-only presentation of the existing list. No writes or event overrides. */
-(() => {
-  'use strict';
+function updateListProgress(visible) {
+  const shopping = isShoppingMode();
+  const items = shopping ? visible : visible.filter(belongsToToday);
+  const done = items.filter(item => item.done).length;
+  const total = items.length;
+  const complete = total > 0 && done === total;
+  const later = shopping ? 0 : visible.filter(item => !item.done && !isRangeTask(item) && !belongsToToday(item)).length;
   const bar = document.getElementById('listProgressBar');
-  const fill = document.getElementById('progressFill');
-  const count = document.getElementById('progressCount');
-  const caption = document.getElementById('progressCaption');
+  const panel = bar.closest('.list-progress');
   const note = document.getElementById('progressNote');
-  function update() {
-    const shopping = isShoppingMode();
-    const visible = currentItems().filter(item => shopping || isTaskVisibleNow(item));
-    // Active ranges are informational notes without a completion control.
-    const items = visible.filter(item => shopping || !isRangeTask(item));
-    const done = items.filter(item => item.done).length;
-    const total = items.length;
-    const percentage = total ? Math.round(done / total * 100) : 0;
-    const summary = `${shopping ? 'נקנו' : 'בוצעו'} ${done} מתוך ${total}`;
-    caption.textContent = shopping ? 'סוגרות את הרשימה' : 'בקצב שלך';
-    count.textContent = summary;
-    bar.setAttribute('aria-valuenow', String(percentage));
-    bar.setAttribute('aria-valuetext', total ? summary : 'הרשימה ריקה');
-    fill.style.transform = `scaleX(${total ? done / total : 0})`;
-    bar.closest('.list-progress').classList.toggle('is-complete', total > 0 && done === total);
-    note.textContent = !total ? 'מתחילות בדבר אחד קטן.' : done === total ? 'הכול מסומן. מגיע לך רגע לעצמך.' : done ? 'עוד דבר קטן ירד מהראש.' : 'בלי לחץ. דבר אחד בכל פעם.';
-    if (!shopping && visible.some(isRangeTask)) note.textContent += ' טווחי תאריכים לא נספרים.';
+  const summary = (shopping ? 'נקנו ' : 'בוצעו ') + done + ' מתוך ' + total;
+  const laterCopy = later === 1 ? 'תזכורת אחת להמשך' : later + ' תזכורות להמשך';
+  const caption = document.getElementById('progressCaption');
+  caption.textContent = shopping ? 'סוגרות את הרשימה' : 'היום';
+  caption.hidden = !shopping && (!total || complete);
+  const count = document.getElementById('progressCount');
+  count.textContent = shopping ? summary : !total ? 'אין משימות להיום' :
+    complete ? 'סיימת להיום' : summary;
+  bar.setAttribute('aria-valuenow', String(total ? Math.round(100 * done / total) : 0));
+  bar.setAttribute('aria-valuetext', total ? summary : count.textContent);
+  document.getElementById('progressFill').style.transform = 'scaleX(' + (total ? done / total : 0) + ')';
+  panel.classList.toggle('is-complete', complete);
+  panel.classList.toggle('no-tasks', !total && !shopping);
+  if (shopping) {
+    note.textContent = !total ? 'מתחילות בדבר אחד קטן.' : complete ? 'הכול מסומן. מגיע לך רגע לעצמך.' :
+      done ? 'עוד דבר קטן ירד מהראש.' : 'בלי לחץ. דבר אחד בכל פעם.';
+  } else {
+    const detail = [];
+    if (complete) detail.push(summary);
+    if ((!total || complete) && later) detail.push(laterCopy);
+    note.textContent = detail.join(' · ');
   }
-  new MutationObserver(update).observe(document.getElementById('taskList'), {childList: true});
-  update();
-})();
+  note.hidden = !note.textContent;
+}
