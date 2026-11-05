@@ -19,6 +19,21 @@ body:not(.shopping-mode) .list-progress.is-complete #progressFill { background: 
 body:not(.shopping-mode) .list-progress.is-complete #progressCount { color: #375d49; }
 body:not(.shopping-mode) .list-progress.no-tasks .progress-track { display: none; }
 body:not(.shopping-mode) #progressNote { flex-basis: 100%; font-size: 12px; margin: 0; color: #5d5264; }
-.shopping-tab-copy { display: grid; min-width: 0; text-align: start; }
-#urgentTabNote { display: block; max-width: 13ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 1.25; color: #395d49; }
+#shoppingTab { flex-wrap: wrap; align-content: center; row-gap: 2px; }
+#urgentTabNote {
+  flex: 0 0 100%;
+  min-width: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #395d49;
+}
+.shopping-priority .task-text {
+  display: block;
+  max-height: none;
+  white-space: pre-line;
+  -webkit-line-clamp: unset;
+}
+.shopping-priority .task-more-button { display: none; }
 .later-label { margin: 10px 3px 0; color: #64566e; font-family: inherit; font-size: 14px; font-weight: 650; }
