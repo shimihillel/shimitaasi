@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="שימי, תעשי" />
   <title>שימי, תעשי</title>
-  <!-- app-version: v30.4 -->
+  <!-- app-version: v30.5 -->
   <link rel="manifest" href="manifest.json?v=29.1" />
   <link rel="apple-touch-icon" href="icons/icon-v29-180.png" />
   <link rel="icon" href="icons/icon-v29-32.png" />
@@ -234,6 +234,9 @@
         <input id="recurringMonthDay" class="recurring-number" type="number" min="1" max="31" value="1" />
       </div>
 
+      <label class="field-label" for="recurringPin">מיקום ברשימה של היום</label>
+      <select id="recurringPin" class="recurring-select"></select>
+      <p id="recurringPinError" class="inline-error" role="alert" hidden></p>
       <p class="hint">אם מטלה קבועה כבר פתוחה ברשימה — לא נוצרת כפילות. תודה לאל.</p>
       <button class="save-button" type="submit">שימי, תעשי</button>
     </form>
@@ -307,7 +310,7 @@
   </dialog>
 
   <script src="progress.js?v=30.4"></script>
-  <script src="app.js?v=30.4"></script>
+  <script src="app.js?v=30.5"></script>
   <script src="calendar-swipe.js?v=27.1"></script>
   <script src="reorder.js?v=30.3"></script>
 </body>

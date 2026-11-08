@@ -75,6 +75,8 @@ const recurringForm = document.getElementById("recurringForm");
 const recurringFormTitle = document.getElementById("recurringFormTitle");
 const recurringInput = document.getElementById("recurringInput");
 const recurringFrequency = document.getElementById("recurringFrequency");
+const recurringPin = document.getElementById("recurringPin");
+const recurringPinError = document.getElementById("recurringPinError");
 const recurringWeekday = document.getElementById("recurringWeekday");
 const recurringMonthDay = document.getElementById("recurringMonthDay");
 const weeklyOptions = document.getElementById("weeklyOptions");
@@ -105,6 +107,12 @@ let calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1
 let selectedCalendarDate = null;
 
 const weekdayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+const pinPositions = new Map([
+  ["top-1", { label: "ראשונה ברשימה", order: -2 }],
+  ["top-2", { label: "שנייה מלמעלה", order: -1 }],
+  ["bottom-2", { label: "שנייה מלמטה", order: 1 }],
+  ["bottom-1", { label: "אחרונה ברשימה", order: 2 }]
+]);
 
 function currentItems() {
   return activeList === "shopping" ? shoppingItems : tasks;
@@ -314,24 +322,23 @@ const emptyMessages = {
 };
 
 
+function readStoredList(key) {
+  try {
+    const items = JSON.parse(localStorage.getItem(key));
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
+function readRecurringLists() {
+  tasks = readStoredList(STORAGE_KEY);
+  recurringTasks = normalizeRecurringPins(readStoredList(RECURRING_STORAGE_KEY));
+}
+
 function loadTasks() {
-  try {
-    tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch {
-    tasks = [];
-  }
-
-  try {
-    shoppingItems = JSON.parse(localStorage.getItem(SHOPPING_STORAGE_KEY)) || [];
-  } catch {
-    shoppingItems = [];
-  }
-
-  try {
-    recurringTasks = JSON.parse(localStorage.getItem(RECURRING_STORAGE_KEY)) || [];
-  } catch {
-    recurringTasks = [];
-  }
+  readRecurringLists();
+  shoppingItems = readStoredList(SHOPPING_STORAGE_KEY);
 
   try {
     suggestionCounts = JSON.parse(localStorage.getItem(SUGGESTIONS_STORAGE_KEY)) || {};
@@ -466,21 +473,47 @@ function deleteTask(id) {
   renderTasks();
 }
 
-function getTaskOrderGroup(task) {
-  if (isShoppingMode()) return task.onHead ? 0 : 1;
-  // Early reminders stay below today's tasks, including the evening anchor.
-  if (getCountdownLabel(task)) return 4;
-
-  const title = String(task.text || "").normalize("NFKC")
+function legacyPinForTitle(text) {
+  const title = String(text || "").normalize("NFKC")
     .replace(/[\u0591-\u05c7]/g, "")
     .replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
-  if (/^כדור מדכא(?:\s|$)/.test(title)) return 0;
+  if (/^כדור מדכא(?:\s|$)/.test(title)) return "top-1";
   const words = title.split(" ");
   const ronEyeDrops = words.includes("רון") && words.includes("טיפות") &&
     (words.includes("עיניים") || words.includes("עינים"));
-  if (ronEyeDrops && words.includes("בוקר")) return 1;
-  if (ronEyeDrops && words.includes("ערב")) return 3;
-  return 2;
+  if (ronEyeDrops && words.includes("בוקר")) return "top-2";
+  if (ronEyeDrops && words.includes("ערב")) return "bottom-1";
+  return "";
+}
+
+function normalizeRecurringPins(items) {
+  // Reserve explicit choices before assigning defaults to pre-30.5 rules.
+  const reserved = new Set(items.map(item => item.pinSlot).filter(slot => pinPositions.has(slot)));
+  const used = new Set();
+  return items.map(item => {
+    let slot = item.pinSlot;
+    if (slot === undefined) {
+      slot = legacyPinForTitle(item.text);
+      if (reserved.has(slot)) slot = "";
+    }
+    if (!pinPositions.has(slot) || used.has(slot)) slot = "";
+    if (slot) used.add(slot);
+    return item.pinSlot === slot ? item : { ...item, pinSlot: slot };
+  });
+}
+
+function getTaskOrderGroup(task) {
+  if (isShoppingMode()) return task.onHead ? 0 : 1;
+  if (getCountdownLabel(task)) return 3;
+  let slot;
+  if (task.recurringId) {
+    slot = recurringTasks.find(item => item.id === task.recurringId)?.pinSlot;
+  } else {
+    // Older one-off notes also used title-based ordering. A reserved slot wins.
+    slot = legacyPinForTitle(task.text);
+    if (slot && recurringTasks.some(item => item.pinSlot === slot)) slot = "";
+  }
+  return pinPositions.get(slot)?.order ?? 0;
 }
 
 function sortOpenItems(items) {
@@ -644,6 +677,7 @@ function createRecurringTask(data) {
     id: `rec-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     text: data.text.trim(),
     frequency: data.frequency,
+    pinSlot: data.pinSlot || "",
     weekday: data.weekday,
     weekdays: data.weekdays,
     monthDay: data.monthDay,
@@ -662,10 +696,13 @@ function updateRecurringTask(id, data) {
     ...item,
     text: data.text.trim(),
     frequency: data.frequency,
+    pinSlot: data.pinSlot ?? item.pinSlot,
     weekday: data.weekday,
     weekdays: data.weekdays,
     monthDay: data.monthDay,
-    lastGeneratedAt: null
+    // A position or title edit must not generate a second occurrence today.
+    lastGeneratedAt: data.frequency === "biweekly" && item.lastGeneratedAt !== todayKey() &&
+      (data.frequency !== item.frequency || data.weekday !== Number(item.weekday)) ? null : item.lastGeneratedAt
   } : item);
 
   tasks = tasks.map(task => task.recurringId === id && !task.done ? { ...task, text: data.text.trim() } : task);
@@ -677,13 +714,16 @@ function updateRecurringTask(id, data) {
 }
 
 function deleteRecurringTask(id) {
+  readRecurringLists();
   recurringTasks = recurringTasks.filter(item => item.id !== id);
   saveRecurringTasks();
   renderRecurringTasks();
+  renderTasks();
 }
 
 
 function setRecurringEnabled(id, enabled) {
+  readRecurringLists();
   recurringTasks = recurringTasks.map(item => item.id === id ? { ...item, enabled } : item);
   saveRecurringTasks();
   generateDueRecurringTasks();
@@ -1173,7 +1213,7 @@ function importBackupFile(file) {
       if (!ok) return;
       tasks = data.tasks;
       shoppingItems = data.shoppingItems;
-      recurringTasks = data.recurringTasks;
+      recurringTasks = normalizeRecurringPins(data.recurringTasks);
       suggestionCounts = data.suggestions || suggestionCounts || {};
       saveSuggestions();
       applyTheme();
@@ -1407,6 +1447,7 @@ function applyViewMove() {
 }
 
 function openRecurringDialog() {
+  readRecurringLists();
   renderRecurringTasks();
   recurringDialog.showModal();
 }
@@ -1423,8 +1464,21 @@ function updateRecurringScheduleVisibility() {
   if (frequency !== "multiweekly") multiWeeklyError.hidden = true;
 }
 
+function showPinOptions(selected) {
+  recurringPin.replaceChildren(new Option("ללא הצמדה", ""));
+  for (const [slot, position] of pinPositions) {
+    const owner = recurringTasks.find(item => item.id !== editingRecurringId && item.pinSlot === slot);
+    const option = new Option(owner ? `${position.label} · תפוסה (${owner.text})` : position.label, slot);
+    option.disabled = Boolean(owner);
+    recurringPin.add(option);
+  }
+  recurringPin.value = selected;
+}
+
 function openRecurringForm(mode, recurring = null) {
   editingRecurringId = mode === "edit" ? recurring.id : null;
+  showPinOptions(recurring?.pinSlot || "");
+  recurringPinError.hidden = true;
   recurringFormTitle.innerHTML = mode === "edit" ? "<mark>מה לשנות בקבועה?</mark>" : "<mark>מה חוזר על עצמו?</mark>";
   recurringInput.value = recurring?.text || "";
   recurringFrequency.value = recurring?.frequency || "weekly";
@@ -1818,6 +1872,7 @@ function renderRecurringTasks() {
     title.textContent = recurring.text;
     const meta = document.createElement("span");
     meta.textContent = `${frequencyLabel(recurring)} · ${recurring.enabled === false ? "כבויה" : "פעילה"}`;
+    if (recurring.pinSlot) meta.textContent += ` · ${pinPositions.get(recurring.pinSlot).label}`;
     text.append(title, meta);
 
     const actions = document.createElement("div");
@@ -1964,6 +2019,7 @@ closeRecurringButton.addEventListener("click", closeRecurringDialog);
 addRecurringButton.addEventListener("click", () => openRecurringForm("add"));
 closeRecurringFormButton.addEventListener("click", closeRecurringForm);
 recurringFrequency.addEventListener("change", updateRecurringScheduleVisibility);
+recurringPin.addEventListener("change", () => { recurringPinError.hidden = true; });
 recurringWeekdayChecks.forEach(input => input.addEventListener("change", () => { if (recurringWeekdayChecks.some(day => day.checked)) multiWeeklyError.hidden = true; }));
 
 recurringForm.addEventListener("submit", event => {
@@ -1979,8 +2035,27 @@ recurringForm.addEventListener("submit", event => {
     return;
   }
   multiWeeklyError.hidden = true;
+  // The form may have been open while another tab changed the assignments.
+  const pinSlot = recurringPin.value;
+  readRecurringLists();
+  if (editingRecurringId && !recurringTasks.some(item => item.id === editingRecurringId)) {
+    closeRecurringForm();
+    renderRecurringTasks();
+    renderTasks();
+    showToast("המשימה הקבועה נמחקה בחלון אחר");
+    return;
+  }
+  const owner = pinSlot && recurringTasks.find(item => item.id !== editingRecurringId && item.pinSlot === pinSlot);
+  if (owner) {
+    showPinOptions("");
+    recurringPinError.textContent = `המקום נתפס על ידי „${owner.text}”. בחרי מיקום אחר.`;
+    recurringPinError.hidden = false;
+    recurringPin.focus();
+    return;
+  }
   const data = {
     text,
+    pinSlot,
     frequency: recurringFrequency.value,
     weekday: Number(recurringWeekday.value),
     weekdays,
